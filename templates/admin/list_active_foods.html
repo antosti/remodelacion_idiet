@@ -1,0 +1,136 @@
+{% extends 'admin/layout.html' %}
+{% block title %} Lista de alimentos activos {% endblock %}
+{% load static %}
+
+{% block content %}
+<div class="w-full p-6 bg-gray-50 rounded-2xl">
+    <div class="px-2 mb-6">
+        <h1 class="text-2xl font-bold text-gray-700 text-center">Lista de Alimentos Activos</h1>
+    </div>
+
+    <form method="GET" class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block mb-2 text-sm font-semibold text-gray-700">
+                    Nombre del alimento:
+                </label>
+                <input type="text" name="food_name" placeholder="Buscar por nombre..."
+                    class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+            </div>
+
+            <div>
+                <label class="block mb-2 text-sm font-semibold text-gray-700">
+                    Filtrar grupo:
+                </label>
+                <select name="food_group_filter"
+                    class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                    <option value="">Todos</option>
+                    {% for food_group in food_groups %}
+                    <option value="{{ food_group.id }}">{{ food_group.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="block mb-2 text-sm font-semibold text-gray-700">
+                    Filtrar origen:
+                </label>
+                <select name="food_origin_filter"
+                    class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                    <option value="">Todos</option>
+                    <option value="animal">i-Diet</option>
+                    <option value="vegetal">Nuevo</option>
+                    <option value="mineral">Editado</option>
+                    <option value="otro">Duplicado</option>
+                </select>
+            </div>
+        </div>
+    </form>
+
+    <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-5">
+            <div class="flex items-center gap-2 text-gray-700">
+                <span class="text-sm font-semibold">Mostrando</span>
+                <select class="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                    <option>10</option>
+                    <option>25</option>
+                    <option>50</option>
+                    <option selected>100</option>
+                </select>
+                <span class="text-sm font-semibold">Resultados</span>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <label class="text-sm font-semibold text-gray-700">Búsqueda rápida:</label>
+                <input type="text"
+                    class="border rounded-lg px-3 py-2 w-full md:w-56 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full min-w-full">
+                <thead>
+                    <tr class="border-b border-gray-200">
+                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
+                            <input type="checkbox"
+                                class="rounded border-gray-300 text-secondary focus:ring-secondary/30">
+                        </th>
+                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
+                            Nombre
+                        </th>
+                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
+                            Grupo
+                        </th>
+                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
+                            Kcal/100g
+                        </th>
+                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
+                            % Hidratos
+                        </th>
+                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
+                            % Proteínas
+                        </th>
+                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
+                            % Grasas
+                        </th>
+                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
+                            Origen
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="hover:bg-gray-50">
+                        {% for product in products %}
+                        <td class="px-4 py-4 border-b border-gray-100">
+                            <input type="checkbox"
+                                class="rounded border-gray-300 text-secondary focus:ring-secondary/30">
+                        </td>
+                        <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
+                            {{ product.food_name_spanish }}
+                        </td>
+                        <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
+                            {{ product.food_group }}
+                        </td>
+                        <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
+                            {{ product.kcal_100g }}
+                        </td>
+                        <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
+                            {{ product.ch_g }}
+                        </td>
+                        <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
+                            {{ product.prot_g }}
+                        </td>
+                        <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
+                            {{ product.fat_g }}
+                        </td>
+                        <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
+                            {{ product.origin_db }}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -2,7 +2,6 @@ from django.db import models
 from Micronutrients.models import Micronutrient
 
 # Create your models here.
-
 class Product(models.Model):
     
     food_name = models.CharField(max_length=200, help_text="Original food name. Must be less than 200 characters")
@@ -14,7 +13,7 @@ class Product(models.Model):
     prot_g = models.DecimalField(max_digits=10, decimal_places=2)
     ch_g = models.DecimalField(max_digits=10, decimal_places=2)
     fat_g = models.DecimalField(max_digits=10, decimal_places=2)
-    
+
     # Many to many relationship with Micronutrient
     micronutrient = models.ManyToManyField(Micronutrient)
     

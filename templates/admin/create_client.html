@@ -1,0 +1,250 @@
+{% extends 'admin/layout.html' %}
+{% block title %} Crear cliente {% endblock %}
+{% load static %}
+
+{% block content %}
+<div class="w-full p-6 bg-gray-50 rounded-2xl">
+    <div class="flex flex-row justify-between items-center px-2 mb-6">
+        <h1 class="text-2xl font-bold text-gray-700">Crear cliente</h1>
+        <button class="h-10 flex items-center gap-2 px-3 py-1 border rounded-lg bg-idiet text-white text-sm">
+            <h3 class="font-semibold">Mediciones del cliente</h3>
+            <svg class="w-4 h-4" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="#000000">
+                <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                <g id="SVGRepo_iconCarrier">
+                    <path fill="#8bbb31"
+                        d="M2,1 C2.51283143,1 2.93550653,1.38604429 2.9932722,1.88337975 L3,2 L3,13 L14,13 C14.5523,13 15,13.4477 15,14 C15,14.51285 14.613973,14.9355092 14.1166239,14.9932725 L14,15 L3,15 C1.94563773,15 1.08183483,14.18415 1.00548573,13.1492661 L1,13 L1,2 C1,1.44772 1.44772,1 2,1 Z M6,7 C6.51283143,7 6.93550653,7.38604429 6.9932722,7.88337975 L7,8 L7,10 C7,10.5523 6.55228,11 6,11 C5.48716857,11 5.06449347,10.613973 5.0067278,10.1166239 L5,10 L5,8 C5,7.44771 5.44772,7 6,7 Z M10,3 C10.5523,3 11,3.44772 11,4 L11,10 C11,10.5523 10.5523,11 10,11 C9.44771,11 9,10.5523 9,10 L9,4 C9,3.44772 9.44771,3 10,3 Z M14,5 C14.5523,5 15,5.44772 15,6 L15,10 C15,10.5523 14.5523,11 14,11 C13.4477,11 13,10.5523 13,10 L13,6 C13,5.44772 13.4477,5 14,5 Z">
+                    </path>
+                </g>
+            </svg>
+        </button>
+    </div>
+
+    <form method="POST" class="space-y-6">
+        {% csrf_token %}
+
+        <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+            <h2 class="text-lg font-semibold mb-4 text-gray-700">Datos básicos</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold text-gray-700">DNI</label>
+                    <input type="text" name="dni" placeholder="12345678A"
+                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                </div>
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold text-gray-700">Nombre</label>
+                    <input type="text" name="first_name" placeholder="Juan"
+                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                </div>
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold text-gray-700">Apellidos</label>
+                    <input type="text" name="last_name" placeholder="Sánchez Díaz"
+                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                </div>
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold text-gray-700">Usuario</label>
+                    <input type="text" name="username" placeholder="juanperez"
+                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                </div>
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold text-gray-700">Email</label>
+                    <input type="email" name="email" placeholder="juan@email.com"
+                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                </div>
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold text-gray-700">Peso (kg)</label>
+                    <input type="number" name="weight" placeholder="75"
+                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                </div>
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold text-gray-700">Sexo</label>
+                    <select name="gender"
+                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                        <option value="">Seleccionar</option>
+                        <option value="Male">Masculino</option>
+                        <option value="Female">Femenino</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold text-gray-700">Altura (cm)</label>
+                    <input type="number" name="height" placeholder="175"
+                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                </div>
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold text-gray-700">Actividad</label>
+                    <select name="activity_level"
+                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                        <option value="">Seleccionar</option>
+                        <option value="Reposo">Reposo</option>
+                        <option value="Ligera">Ligera</option>
+                        <option value="Moderada">Moderada</option>
+                        <option value="Intensa">Intensa</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold text-gray-700">Fecha de nacimiento</label>
+                    <input type="date" name="birth_date"
+                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                </div>
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold text-gray-700">Actividad extra</label>
+                    <input type="text" name="additional_activity" placeholder="Ej: fútbol 2 veces/semana"
+                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                </div>
+
+            </div>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-gray-700">Información</h2>
+                <button type="button" class="px-3 py-1 border rounded-lg bg-secondary text-white">Modificar</button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block mb-1 text-sm font-semibold text-gray-700">Metabolismo basal</label>
+                    <input type="number" step="0.01" name="metabolismo_basal" placeholder="1500"
+                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                </div>
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold text-gray-700">Gasto energético</label>
+                    <input type="number" step="0.01" name="gasto_energetico" placeholder="2200"
+                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                </div>
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold text-gray-700">IMC</label>
+                    <input type="number" step="0.01" name="imc" placeholder="24.5"
+                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-gray-700">Excluir grupo de alimentos completo</h2>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div>
+                    <label class="block mb-2 text-sm font-semibold text-gray-700">Grupos disponibles</label>
+                    <input type="text" placeholder="Filtrar grupo..."
+                        class="w-full border rounded-lg px-3 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+
+                    <div class="border rounded-xl bg-white h-64 overflow-hidden">
+                        <div class="h-full overflow-y-auto p-2 space-y-1">
+                            {% for food_group in food_groups %}
+                            <button type="button" data-value="{{ food_group.id }}"
+                                class="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                {{ food_group.name }}
+                            </button>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block mb-2 text-sm font-semibold text-gray-700">Grupos excluidos</label>
+                    <input type="text" placeholder="Filtrar excluidos..."
+                        class="w-full border rounded-lg px-3 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+
+                    <div class="border rounded-xl bg-white h-64 overflow-hidden">
+                        <div class="h-full overflow-y-auto p-2 space-y-1">
+                            <div class="w-full text-left px-3 py-2 rounded-lg text-gray-400">
+                                Aquí aparecerán los grupos excluidos
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 flex flex-wrap gap-2">
+                <button type="button"
+                    class="px-3 py-2 border rounded-lg bg-secondary text-white focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                    Excluir alimentos individualmente
+                </button>
+                <button type="button"
+                    class="px-3 py-2 border rounded-lg bg-red-500 text-white focus:outline-none focus:ring-2 focus:ring-red-300">
+                    Limpiar
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+            <h2 class="text-lg font-semibold mb-4 text-gray-700">Recomendaciones</h2>
+            <textarea name="recomendaciones" rows="3"
+                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30"></textarea>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+            <h2 class="text-lg font-semibold mb-4 text-gray-700">Notas del nutricionista (Solo lectura)</h2>
+            <textarea name="notas" rows="3" readonly
+                class="w-full border rounded-lg px-3 py-2 bg-gray-100 focus:outline-none focus:ring-2 focus:ring-secondary/30"></textarea>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+            <h2 class="text-lg font-semibold mb-4 text-gray-700">Datos opcionales</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold text-gray-700">Dirección</label>
+                    <input type="text" name="address" placeholder="Calle Ejemplo 123"
+                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                </div>
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold text-gray-700">Localidad</label>
+                    <input type="text" name="city" placeholder="Valencia"
+                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                </div>
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold text-gray-700">Código postal</label>
+                    <input type="text" name="postal_code" placeholder="46001"
+                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                </div>
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold text-gray-700">Teléfono fijo</label>
+                    <input type="text" name="phone_number" placeholder="961234567"
+                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                </div>
+
+                <div>
+                    <label class="block mb-1 text-sm font-semibold text-gray-700">Teléfono móvil</label>
+                    <input type="text" name="phone_number_2" placeholder="600123456"
+                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                </div>
+
+            </div>
+        </div>
+
+        <div class="flex justify-between pt-2">
+            <a href="#"
+                class="w-85 px-4 py-2 border rounded-lg bg-red-500 text-white flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-red-300">
+                Atrás
+            </a>
+            <button type="submit"
+                class="w-85 px-4 py-2 bg-idiet text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                Guardar
+            </button>
+        </div>
+
+    </form>
+</div>
+{% endblock %}
