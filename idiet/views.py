@@ -8,6 +8,7 @@ from Menus.models import Menu
 from Appointments.models import Appointment
 from FoodGroup.models import FoodGroup
 from django.utils import timezone
+from django.core.paginator import Paginator
 
 def home_page(request):
     # return HttpResponse("Hello world! This is the home page.")
@@ -82,7 +83,35 @@ def list_active_foods(request):
     food_groups = FoodGroup.objects.all()
     products = Product.objects.all()
 
+    sort = request.GET.get('sort', 'name').strip()
+    direction = request.GET.get('direction', 'asc').strip()
+
+    allowed_sorts = {
+        'name': 'food_name_spanish',
+        'group': 'food_group__name',
+        'kcal': 'kcal_100g',
+        'carbs': 'ch_g',
+        'protein': 'prot_g',
+        'fat': 'fat_g',
+        'origin': 'origin_db',
+    }
+
+    current_sort = sort if sort in allowed_sorts else 'name'
+    current_direction = 'desc' if direction == 'desc' else 'asc'
+
+    order_field = allowed_sorts[current_sort]
+    if current_direction == 'desc':
+        order_field = f'-{order_field}'
+
+    products = products.order_by(order_field)
+
+    paginator = Paginator(products, 100)
+    page_number = request.GET.get('page')
+    products = paginator.get_page(page_number)
+
     return render(request, 'admin/list_active_foods.html',  {
         'food_groups': food_groups,
         'products': products,
+        'current_sort': current_sort,
+        'current_direction': current_direction,
     })

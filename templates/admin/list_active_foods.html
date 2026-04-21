@@ -38,10 +38,10 @@
                 <select name="food_origin_filter"
                     class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
                     <option value="">Todos</option>
-                    <option value="animal">i-Diet</option>
-                    <option value="vegetal">Nuevo</option>
-                    <option value="mineral">Editado</option>
-                    <option value="otro">Duplicado</option>
+                    <option value="i-Diet">i-Diet</option>
+                    <option value="Nuevo">Nuevo</option>
+                    <option value="Editado">Editado</option>
+                    <option value="Duplicado">Duplicado</option>
                 </select>
             </div>
         </div>
@@ -76,31 +76,122 @@
                                 class="rounded border-gray-300 text-secondary focus:ring-secondary/30">
                         </th>
                         <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
-                            Nombre
+                            <a href="?sort=name&direction={% if current_sort == 'name' and current_direction == 'asc' %}desc{% else %}asc{% endif %}"
+                            class="flex items-center gap-4">
+                                Nombre
+                                <svg class="h-4 w-4" fill="#ababab" viewBox="0 0 16 16"
+                                    xmlns="http://www.w3.org/2000/svg" stroke="#ababab">
+                                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                                    <g id="SVGRepo_iconCarrier">
+                                        <path d="M2 4H0l3-4 3 4H4v12H2V4zm12 8h2l-3 4-3-4h2V0h2v12z"
+                                            fill-rule="evenodd">
+                                        </path>
+                                    </g>
+                                </svg>
+                            </a>
                         </th>
                         <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
-                            Grupo
+                            <a href="?sort=group&direction={% if current_sort == 'group' and current_direction == 'asc' %}desc{% else %}asc{% endif %}"
+                            class="flex items-center gap-4">
+                                Grupo
+                                <svg class="h-4 w-4" fill="#ababab" viewBox="0 0 16 16"
+                                    xmlns="http://www.w3.org/2000/svg" stroke="#ababab">
+                                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                                    <g id="SVGRepo_iconCarrier">
+                                        <path d="M2 4H0l3-4 3 4H4v12H2V4zm12 8h2l-3 4-3-4h2V0h2v12z"
+                                            fill-rule="evenodd">
+                                        </path>
+                                    </g>
+                                </svg>
+                            </a>
                         </th>
                         <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
-                            Kcal/100g
+                            <a href="?sort=kcal&direction={% if current_sort == 'kcal' and current_direction == 'asc' %}desc{% else %}asc{% endif %}"
+                            class="flex items-center gap-4">
+                                Kcal/100g
+                                <svg class="h-4 w-4" fill="#ababab" viewBox="0 0 16 16"
+                                    xmlns="http://www.w3.org/2000/svg" stroke="#ababab">
+                                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                                    <g id="SVGRepo_iconCarrier">
+                                        <path d="M2 4H0l3-4 3 4H4v12H2V4zm12 8h2l-3 4-3-4h2V0h2v12z"
+                                            fill-rule="evenodd">
+                                        </path>
+                                    </g>
+                                </svg>
+                            </a>
                         </th>
                         <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
-                            % Hidratos
+                            <a href="?sort=carbs&direction={% if current_sort == 'carbs' and current_direction == 'asc' %}desc{% else %}asc{% endif %}"
+                            class="flex items-center gap-4">
+                                % Hidratos
+                                <svg class="h-4 w-4" fill="#ababab" viewBox="0 0 16 16"
+                                    xmlns="http://www.w3.org/2000/svg" stroke="#ababab">
+                                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                                    <g id="SVGRepo_iconCarrier">
+                                        <path d="M2 4H0l3-4 3 4H4v12H2V4zm12 8h2l-3 4-3-4h2V0h2v12z"
+                                            fill-rule="evenodd">
+                                        </path>
+                                    </g>
+                                </svg>
+                            </a>
                         </th>
                         <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
-                            % Proteínas
+                            <a href="?sort=protein&direction={% if current_sort == 'protein' and current_direction == 'asc' %}desc{% else %}asc{% endif %}"
+                            class="flex items-center gap-4">
+                                % Proteínas
+                                <svg class="h-4 w-4" fill="#ababab" viewBox="0 0 16 16"
+                                    xmlns="http://www.w3.org/2000/svg" stroke="#ababab">
+                                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                                    <g id="SVGRepo_iconCarrier">
+                                        <path d="M2 4H0l3-4 3 4H4v12H2V4zm12 8h2l-3 4-3-4h2V0h2v12z"
+                                            fill-rule="evenodd">
+                                        </path>
+                                    </g>
+                                </svg>
+                            </a>
                         </th>
                         <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
-                            % Grasas
+                            <a href="?sort=fat&direction={% if current_sort == 'fat' and current_direction == 'asc' %}desc{% else %}asc{% endif %}"
+                            class="flex items-center gap-4">
+                                % Grasas
+                                <svg class="h-4 w-4" fill="#ababab" viewBox="0 0 16 16"
+                                    xmlns="http://www.w3.org/2000/svg" stroke="#ababab">
+                                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                                    <g id="SVGRepo_iconCarrier">
+                                        <path d="M2 4H0l3-4 3 4H4v12H2V4zm12 8h2l-3 4-3-4h2V0h2v12z"
+                                            fill-rule="evenodd">
+                                        </path>
+                                    </g>
+                                </svg>
+                            </a>
                         </th>
                         <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
-                            Origen
+                            <a href="?sort=origin&direction={% if current_sort == 'origin' and current_direction == 'asc' %}desc{% else %}asc{% endif %}"
+                            class="flex items-center gap-4">
+                                Origen
+                                <svg class="h-4 w-4" fill="#ababab" viewBox="0 0 16 16"
+                                    xmlns="http://www.w3.org/2000/svg" stroke="#ababab">
+                                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                                    <g id="SVGRepo_iconCarrier">
+                                        <path d="M2 4H0l3-4 3 4H4v12H2V4zm12 8h2l-3 4-3-4h2V0h2v12z"
+                                            fill-rule="evenodd">
+                                        </path>
+                                    </g>
+                                </svg>
+                            </a>
                         </th>
                     </tr>
                 </thead>
                 <tbody>
+                    {% for product in products %}
                     <tr class="hover:bg-gray-50">
-                        {% for product in products %}
                         <td class="px-4 py-4 border-b border-gray-100">
                             <input type="checkbox"
                                 class="rounded border-gray-300 text-secondary focus:ring-secondary/30">
@@ -126,11 +217,86 @@
                         <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
                             {{ product.origin_db }}
                         </td>
-                        {% endfor %}
                     </tr>
+                    {% endfor %}
                 </tbody>
             </table>
         </div>
+
+        {% if products.paginator.count > 0 %}
+        <div
+            class="mt-5 flex flex-col gap-4 border-t border-gray-200 pt-4 md:flex-row md:items-center md:justify-between">
+            <p class="text-sm text-gray-600">
+                Mostrando {{ products.start_index }} a {{ products.end_index }} de {{ products.paginator.count }}
+                resultados
+            </p>
+
+            <div class="flex flex-wrap items-center md:justify-end">
+                {% if products.has_previous %}
+                <a href="?page={{ products.previous_page_number }}"
+                    class="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-l-lg bg-white hover:bg-gray-50">
+                    Anterior
+                </a>
+                {% else %}
+                <span class="px-4 py-2 text-sm text-gray-400 border border-gray-200 rounded-l-lg bg-gray-50">
+                    Anterior
+                </span>
+                {% endif %}
+
+                {% if products.number > 3 %}
+                <a href="?page=1"
+                    class="px-4 py-2 text-sm text-gray-700 border-t border-b border-r border-gray-300 bg-white hover:bg-gray-50">
+                    1
+                </a>
+                {% if products.number > 4 %}
+                <span
+                    class="px-4 py-2 text-sm text-gray-500 border-t border-b border-r border-gray-300 bg-white">...</span>
+                {% endif %}
+                {% endif %}
+
+                {% if products.has_previous %}
+                <a href="?page={{ products.previous_page_number }}">
+                    {{ products.previous_page_number }}
+                </a>
+                {% endif %}
+
+                <span
+                    class="px-4 py-2 text-sm font-semibold text-white border-t border-b border-r border-gray-300 bg-idiet">
+                    {{ products.number }}
+                </span>
+
+                {% if products.has_next %}
+                <a href="?page={{ products.next_page_number }}"
+                    class="px-4 py-2 text-sm text-gray-700 border-t border-b border-r border-gray-300 bg-white hover:bg-gray-50">
+                    {{ products.next_page_number }}
+                </a>
+                {% endif %}
+
+                {% if products.number < products.paginator.num_pages|add:"-2" %} {% if products.number < products.paginator.num_pages|add:"-3" %} <span
+                    class="px-4 py-2 text-sm text-gray-500 border-t border-b border-r border-gray-300 bg-white">
+                    ...</span>
+                    {% endif %}
+                    <a href="?page={{ products.paginator.num_pages }}"
+                        class="px-4 py-2 text-sm text-gray-700 border-t border-b border-r border-gray-300 bg-white hover:bg-gray-50">
+                        {{ products.paginator.num_pages }}
+                    </a>
+                    {% endif %}
+
+                    {% if products.has_next %}
+                    <a href="?page={{ products.next_page_number }}"
+                        class="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-r-lg bg-white hover:bg-gray-50">
+                        Siguiente
+                    </a>
+                    {% else %}
+                    <span class="px-4 py-2 text-sm text-gray-400 border border-gray-200 rounded-r-lg bg-gray-50">
+                        Siguiente
+                    </span>
+                    {% endif %}
+
+            </div>
+        </div>
+        {% endif %}
+
     </div>
 </div>
 {% endblock %}
