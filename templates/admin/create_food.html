@@ -1,0 +1,561 @@
+{% extends 'admin/layout.html' %}
+{% block title %} Crear alimento {% endblock %}
+{% load static %}
+
+{% block content %}
+<div class="w-full p-4 sm:p-6 bg-gray-50 rounded-2xl">
+        <div class="flex flex-col gap-2 px-2 mb-6 sm:flex-row sm:items-center sm:justify-between">
+                <h1 class="text-2xl font-bold text-gray-700">Crear alimento</h1>
+                <h3 class="text-lg sm:text-base lg:text-lg text-gray-600">
+                        Crea el alimento que deseas agregar a la base de datos
+                </h3>
+        </div>
+
+        <form method="POST" class="space-y-6">
+                {% csrf_token %}
+
+                <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+                        <h2 class="text-lg font-semibold mb-4 text-gray-700">Datos obligatorios</h2>
+
+                        <div class="space-y-4">
+                                <div>
+                                        <label class="block mb-1 text-sm font-semibold text-gray-700">Nombre</label>
+                                        <input type="text" name="name" placeholder="Nombre del alimento"
+                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                </div>
+
+                                <div>
+                                        <label class="block mb-1 text-sm font-semibold text-gray-700">Kcal /
+                                                100g</label>
+                                        <input type="number" step="0.01" name="kcal_100g" placeholder="0"
+                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                </div>
+
+                                <div>
+                                        <label class="block mb-1 text-sm font-semibold text-gray-700">Grupo</label>
+                                        <select name="food_group"
+                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                <option value="">Seleccionar grupo</option>
+                                                {% for group in food_groups %}
+                                                <option value="{{ group.id }}">{{ group.name }}</option>
+                                                {% endfor %}
+                                        </select>
+                                </div>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                                <label
+                                                        class="block mb-1 text-sm font-semibold text-gray-700">Hidratos</label>
+                                                <input type="number" step="0.01" name="hydrates" placeholder="0"
+                                                        class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                        </div>
+                                        <div>
+                                                <label class="block mb-1 text-sm font-semibold text-gray-700">%</label>
+                                                <input type="number" step="0.01" name="hydrates_percent" placeholder="0"
+                                                        class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                        </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                                <label
+                                                        class="block mb-1 text-sm font-semibold text-gray-700">Proteínas</label>
+                                                <input type="number" step="0.01" name="proteins" placeholder="0"
+                                                        class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                        </div>
+                                        <div>
+                                                <label class="block mb-1 text-sm font-semibold text-gray-700">%</label>
+                                                <input type="number" step="0.01" name="proteins_percent" placeholder="0"
+                                                        class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                        </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div>
+                                                <label
+                                                        class="block mb-1 text-sm font-semibold text-gray-700">Grasas</label>
+                                                <input type="number" step="0.01" name="fats" placeholder="0"
+                                                        class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                        </div>
+                                        <div>
+                                                <label class="block mb-1 text-sm font-semibold text-gray-700">%</label>
+                                                <input type="number" step="0.01" name="fats_percent" placeholder="0"
+                                                        class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                        </div>
+                                </div>
+
+                                <div class="pb-2 pt-2">
+                                        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                                                <a href="#"
+                                                        class="mx-auto w-full max-w-44 px-6 py-2 rounded-lg bg-red-500 text-white text-center font-medium focus:outline-none focus:ring-2 focus:ring-red-300 lg:mx-0">
+                                                        Atrás
+                                                </a>
+
+                                                <p class="text-sm text-gray-500 text-center lg:flex-1 lg:px-6">
+                                                        * La suma de Hidratos, Proteínas y Grasas debe dar 100.
+                                                </p>
+
+                                                <button type="submit"
+                                                        class="mx-auto w-full max-w-44 px-6 py-2 rounded-lg bg-idiet text-white font-medium focus:outline-none focus:ring-2 focus:ring-secondary/30 lg:mx-0">
+                                                        Guardar
+                                                </button>
+                                        </div>
+                                </div>
+                        </div>
+                </div>
+
+                <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+                        <h2 class="text-lg font-semibold mb-4 text-gray-700">Super grupo (reglas)</h2>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                                {% for super_group in super_groups %}
+                                <label
+                                        class="flex items-center gap-3 rounded-lg border border-gray-200 px-3 py-2 hover:bg-gray-50">
+                                        <input type="checkbox" name="super_group" value="{{ super_group.id }}"
+                                                class="rounded border-gray-300 text-secondary focus:ring-secondary/30">
+                                        <span class="text-sm font-medium text-gray-700">{{ super_group }}</span>
+                                </label>
+                                {% endfor %}
+                        </div>
+                </div>
+
+                <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+                        <h2 class="text-lg font-semibold mb-4 text-gray-700">Datos opcionales</h2>
+
+                        <div class="space-y-6">
+                                <div>
+                                        <h3 class="text-sm font-semibold text-idiet mb-3">General</h3>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                                                <div>
+                                                        <label class="block mb-1 text-sm font-semibold text-gray-700">Nombre
+                                                                inglés</label>
+                                                        <input type="text" name="english_name"
+                                                                placeholder="Nombre inglés"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+
+                                                <div>
+                                                        <label class="block mb-1 text-sm font-semibold text-gray-700">Agua
+                                                                (g)</label>
+                                                        <input type="number" step="0.01" name="water" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+
+                                                <div>
+                                                        <label class="block mb-1 text-sm font-semibold text-gray-700">Fibra
+                                                                (g)</label>
+                                                        <input type="number" step="0.01" name="fiber" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+
+                                                <div>
+                                                        <label class="block mb-1 text-sm font-semibold text-gray-700">PC
+                                                                (%)</label>
+                                                        <input type="number" step="0.01" name="pc" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+
+                                                <div>
+                                                        <label class="block mb-1 text-sm font-semibold text-gray-700">AGS
+                                                                totales (g)</label>
+                                                        <input type="number" step="0.01" name="ags_total"
+                                                                placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+
+                                                <div>
+                                                        <label class="block mb-1 text-sm font-semibold text-gray-700">AGM
+                                                                totales (g)</label>
+                                                        <input type="number" step="0.01" name="agm_total"
+                                                                placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+
+                                                <div>
+                                                        <label class="block mb-1 text-sm font-semibold text-gray-700">AGP
+                                                                totales (g)</label>
+                                                        <input type="number" step="0.01" name="agp_total"
+                                                                placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+
+                                                <div>
+                                                        <label class="block mb-1 text-sm font-semibold text-gray-700">Colesterol
+                                                                (mg)</label>
+                                                        <input type="number" step="0.01" name="cholesterol"
+                                                                placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                        </div>
+                                </div>
+
+                                <div>
+                                        <h3 class="text-sm font-semibold text-idiet mb-3">Vitaminas y otros</h3>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Vit A
+                                                                (ug)</label><input type="number" step="0.01"
+                                                                name="vit_a" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Carotenos
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="carotenes" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Tiamina
+                                                                B1
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="vit_b1" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Riboflavina
+                                                                B2
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="vit_b2" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Niacina
+                                                                B3
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="vit_b3" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Ac.
+                                                                Pantoténico B5
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="vit_b5" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Piridoxina
+                                                                B6
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="vit_b6" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Biotina
+                                                                (ug)</label><input type="number" step="0.01"
+                                                                name="biotin" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Ac.
+                                                                Fólico B9
+                                                                (ug)</label><input type="number" step="0.01"
+                                                                name="vit_b9" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Cobalamina
+                                                                B12
+                                                                (ug)</label><input type="number" step="0.01"
+                                                                name="vit_b12" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Vit C
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="vit_c" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Vit D
+                                                                (ug)</label><input type="number" step="0.01"
+                                                                name="vit_d" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Tocoferol
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="tocopherol" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Vit E
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="vit_e" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Vit K
+                                                                (ug)</label><input type="number" step="0.01"
+                                                                name="vit_k" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Purinas
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="purines" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                        </div>
+                                </div>
+
+                                <div>
+                                        <h3 class="text-sm font-semibold text-idiet mb-3">Minerales</h3>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Sodio
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="sodium" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Potasio
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="potassium" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Magnesio
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="magnesium" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Calcio
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="calcium" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Fósforo
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="phosphorus" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Hierro
+                                                                (mg)</label><input type="number" step="0.01" name="iron"
+                                                                placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Cloro
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="chlorine" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Zinc
+                                                                (mg)</label><input type="number" step="0.01" name="zinc"
+                                                                placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Cobre
+                                                                (ug)</label><input type="number" step="0.01"
+                                                                name="copper" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Manganeso
+                                                                (ug)</label><input type="number" step="0.01"
+                                                                name="manganese" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Cromo
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="chromium" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Cobalto
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="cobalt" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Molibdo
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="molybdenum" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Yodo
+                                                                (ug)</label><input type="number" step="0.01"
+                                                                name="iodine" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Flúor
+                                                                (ug)</label><input type="number" step="0.01"
+                                                                name="fluorine" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                        </div>
+                                </div>
+
+                                <div>
+                                        <h3 class="text-sm font-semibold text-idiet mb-3">Ácidos grasos</h3>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Butírico
+                                                                C4:0
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="butyric" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Caproico
+                                                                C6:0
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="caproic" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Caprílico
+                                                                C8:0
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="caprylic" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Cáprico
+                                                                C10:0 (mg)
+                                                        </label><input type="number" step="0.01" name="capric"
+                                                                placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Lárico
+                                                                C12:0
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="lauric" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Mirístico
+                                                                C14:0
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="myristic" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">C15:0
+                                                                (mg)</label><input type="number" step="0.01" name="c15"
+                                                                placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">C15:00
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="c1500" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Palmítico
+                                                                C16:0
+                                                                (mg)</label><input type="number" step="0.01" name="c16"
+                                                                placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">C17:0
+                                                                (mg)</label><input type="number" step="0.01" name="c17"
+                                                                placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">C17:00
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="c1700" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Esteárico
+                                                                C18:0
+                                                                (mg)</label><input type="number" step="0.01" name="c18"
+                                                                placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Araquídico
+                                                                C20:0
+                                                                (mg)</label><input type="number" step="0.01" name="c20"
+                                                                placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Behénico
+                                                                C22:0
+                                                                (mg)</label><input type="number" step="0.01" name="c22"
+                                                                placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Miristol
+                                                                C14:1
+                                                                (mg)</label><input type="number" step="0.01" name="c141"
+                                                                placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Palmitole
+                                                                C16:1
+                                                                (mg)</label><input type="number" step="0.01" name="c161"
+                                                                placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Oleico
+                                                                C18:1
+                                                                (mg)</label><input type="number" step="0.01" name="c181"
+                                                                placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Eicoseno
+                                                                C20:1
+                                                                (mg)</label><input type="number" step="0.01" name="c201"
+                                                                placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">
+                                                                C22:1 (mg)</label><input type="number" step="0.01"
+                                                                name="c221" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Linoleico
+                                                                C18:2
+                                                                (mg)</label><input type="number" step="0.01" name="c182"
+                                                                placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Linolénico
+                                                                C18:3
+                                                                (mg)</label><input type="number" step="0.01" name="c183"
+                                                                placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">C18:4
+                                                                (mg)</label><input type="number" step="0.01" name="c184"
+                                                                placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Araquidónico
+                                                                C20:4
+                                                                (mg)</label><input type="number" step="0.01" name="c204"
+                                                                placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">C20:5
+                                                                (mg)</label><input type="number" step="0.01" name="c205"
+                                                                placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">C22:5
+                                                                (mg)</label><input type="number" step="0.01" name="c225"
+                                                                placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">C22:6
+                                                                (mg)</label><input type="number" step="0.01" name="c226"
+                                                                placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Otros
+                                                                satura
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="satura" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Otros
+                                                                insatura
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="insatura" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Omega
+                                                                3:0
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="omega3" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                                <div><label class="block mb-1 text-sm font-semibold text-gray-700">Etanol
+                                                                (mg)</label><input type="number" step="0.01"
+                                                                name="etanol" placeholder="0"
+                                                                class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                                </div>
+                                        </div>
+                                </div>
+                        </div>
+                </div>
+
+                <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+                        <a href="#"
+                                class="w-full sm:w-40 px-4 py-2 border rounded-lg bg-red-500 text-white flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-red-300">
+                                Atrás
+                        </a>
+
+                        <button type="submit"
+                                class="w-full sm:w-40 px-4 py-2 bg-idiet text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                                Guardar
+                        </button>
+                </div>
+        </form>
+</div>
+{% endblock %}

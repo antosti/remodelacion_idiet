@@ -3,12 +3,16 @@ from django.shortcuts import render, redirect
 from Users.models import User
 from Clients.models import Client
 from Dishes.models import Dish
-from Products.models import Product
+from decimal import Decimal, InvalidOperation
+from Micronutrients.models import Micronutrient
+from Products.models import Product, ProductMicronutrient
 from Menus.models import Menu
 from Appointments.models import Appointment
 from FoodGroup.models import FoodGroup
+from SuperGroup.models import SuperGroup
 from django.utils import timezone
 from django.core.paginator import Paginator
+from django.db import transaction
 
 def home_page(request):
     # return HttpResponse("Hello world! This is the home page.")
@@ -114,4 +118,142 @@ def list_active_foods(request):
         'products': products,
         'current_sort': current_sort,
         'current_direction': current_direction,
+    })
+
+def create_food(request):
+    food_groups = FoodGroup.objects.all()
+    super_groups = SuperGroup.objects.all()
+
+    micronutrient_fields = {
+        'water': 'Agua',
+        'fiber': 'Fibra',
+        'pc': 'PC',
+        'ags_total': 'AGS totales',
+        'agm_total': 'AGM totales',
+        'agp_total': 'AGP totales',
+        'cholesterol': 'Colesterol',
+
+        'vit_a': 'Vit A',
+        'carotenes': 'Carotenos',
+        'vit_b1': 'Tiamina B1',
+        'vit_b2': 'Riboflavina B2',
+        'vit_b3': 'Niacina B3',
+        'vit_b5': 'Ac. Pantoténico B5',
+        'vit_b6': 'Piridoxina B6',
+        'biotin': 'Biotina',
+        'vit_b9': 'Ac. Fólico B9',
+        'vit_b12': 'Cobalamina B12',
+        'vit_c': 'Vit C',
+        'vit_d': 'Vit D',
+        'tocopherol': 'Tocoferol',
+        'vit_e': 'Vit E',
+        'vit_k': 'Vit K',
+        'purines': 'Purinas',
+
+        'sodium': 'Sodio',
+        'potassium': 'Potasio',
+        'magnesium': 'Magnesio',
+        'calcium': 'Calcio',
+        'phosphorus': 'Fósforo',
+        'iron': 'Hierro',
+        'chlorine': 'Cloro',
+        'zinc': 'Zinc',
+        'copper': 'Cobre',
+        'manganese': 'Manganeso',
+        'chromium': 'Cromo',
+        'cobalt': 'Cobalto',
+        'molybdenum': 'Molibdo',
+        'iodine': 'Yodo',
+        'fluorine': 'Flúor',
+
+        'butyric': 'Butírico C4:0',
+        'caproic': 'Caproico C6:0',
+        'caprylic': 'Caprílico C8:0',
+        'capric': 'Cáprico C10:0',
+        'lauric': 'Lárico C12:0',
+        'myristic': 'Mirístico C14:0',
+        'c15': 'C15:0',
+        'c1500': 'C15:00',
+        'c16': 'Palmítico C16:0',
+        'c17': 'C17:0',
+        'c1700': 'C17:00',
+        'c18': 'Esteárico C18:0',
+        'c20': 'Araquídico C20:0',
+        'c22': 'Behénico C22:0',
+        'c141': 'Miristol C14:1',
+        'c161': 'Palmitole C16:1',
+        'c181': 'Oleico C18:1',
+        'c201': 'Eicoseno C20:1',
+        'c221': 'C22:1',
+        'c182': 'Linoleico C18:2',
+        'c183': 'Linolénico C18:3',
+        'c184': 'C18:4',
+        'c204': 'Araquidónico C20:4',
+        'c205': 'C20:5',
+        'c225': 'C22:5',
+        'c226': 'C22:6',
+        'satura': 'Otros satura',
+        'insatura': 'Otros insatura',
+        'omega3': 'Omega 3:0',
+        'etanol': 'Etanol',
+    }
+
+    def get_decimal_value(field_name):
+        raw_value = request.POST.get(field_name, '').strip()
+        if raw_value == '':
+            return Decimal('0.00')
+
+        try:
+            return Decimal(raw_value)
+        except InvalidOperation:
+            return Decimal('0.00')
+
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        english_name = request.POST.get('english_name', '').strip()
+        super_group_ids = request.POST.getlist('super_group')
+
+
+        micronutrients = {
+            micronutrient.name: micronutrient
+            for micronutrient in Micronutrient.objects.all()
+        }
+
+        with transaction.atomic():
+            product = Product.objects.create(
+                food_name=name,
+                food_name_spanish=name,
+                food_name_eng=english_name or name,
+                origin_db='Act. i-Diet',
+                ed_porc=100,
+                kcal_100g=get_decimal_value('kcal_100g'),
+                prot_g=get_decimal_value('proteins'),
+                ch_g=get_decimal_value('hydrates'),
+                fat_g=get_decimal_value('fats'),
+                food_group_id=request.POST.get('food_group') or None,
+            )
+
+            
+            if super_group_ids:
+                product.super_groups.set(super_group_ids)
+
+            for input_name, micronutrient_name in micronutrient_fields.items():
+                micronutrient = micronutrients.get(micronutrient_name)
+                if not micronutrient:
+                    continue
+
+                value = get_decimal_value(input_name)
+
+                if value != Decimal('0.00'):
+                    ProductMicronutrient.objects.create(
+                        product=product,
+                        micronutrient=micronutrient,
+                        value=value,
+                    )
+
+        return redirect('create_food')
+
+    return render(request, 'admin/create_food.html', {
+        'food_groups': food_groups,
+        'super_groups': super_groups,
     })

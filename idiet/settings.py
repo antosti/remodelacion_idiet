@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'Clients',
     'Dishes',
     'FoodGroup',
+    'SuperGroup',
     'Intakes',
     'Menus',
     'Micronutrients',
