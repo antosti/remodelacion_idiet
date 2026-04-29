@@ -275,9 +275,13 @@ def login_view(request):
 
         if user is not None:
             login(request, user)
-            return redirect("home")
+            return redirect("admin-home")
         else:
             messages.error(request, "Email o contraseña incorrectos")
 
     return render(request, "login.html")
+
+def logout_view(request):
+    logout(request)
+    return redirect("home")
 
