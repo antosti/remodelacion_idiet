@@ -27,6 +27,7 @@ urlpatterns = [
     path('create-client/', views.create_client, name='create_client'),
     path('list-active-foods/', views.list_active_foods, name='list_active_foods'),
     path('create-food/', views.create_food, name='create_food'),
+    path('list-clients/', views.list_clients, name='list_clients'),
     # path('about/',),
     # path('users/', include('Users.urls')),
     # path('clients/', include('Clients.urls')),

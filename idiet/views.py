@@ -14,11 +14,14 @@ from django.utils import timezone
 from django.core.paginator import Paginator
 from django.db import transaction
 
+
 def home_page(request):
     # return HttpResponse("Hello world! This is the home page.")
     return render(request, 'home.html')
 
+
 def admin_home(request):
+    # Dashboard counters
     client = Client.objects.all().count()
     dish = Dish.objects.all().count()
     product = Product.objects.all().count()
@@ -27,6 +30,7 @@ def admin_home(request):
 
     recent_appointment = Appointment.objects.order_by('-id').first()
 
+    # Get today's first 3 appointments with related client data
     today = timezone.localdate()
     agenda_client = Appointment.objects.select_related('client').filter(
         start_date__date=today
@@ -37,21 +41,23 @@ def admin_home(request):
     user = request.user
 
     return render(request, 'admin/home.html', {
-        'client' : client,
-        'dish' : dish,
-        'product' : product,
-        'menu' : menu,
-        'appointment' : appointment,
-        'recent_appointment' : recent_appointment,
-        'agenda_client' : agenda_client,
-        'current_user' : user,
-        'new_client' : new_client,
+        'client': client,
+        'dish': dish,
+        'product': product,
+        'menu': menu,
+        'appointment': appointment,
+        'recent_appointment': recent_appointment,
+        'agenda_client': agenda_client,
+        'current_user': user,
+        'new_client': new_client,
     })
+
 
 def create_client(request):
     food_groups = FoodGroup.objects.all()
 
     if request.method == 'POST':
+        # First create the Django user linked to the client
         user = User.objects.create_user(
             email=request.POST.get('email'),
             first_name=request.POST.get('first_name'),
@@ -59,6 +65,7 @@ def create_client(request):
             username=request.POST.get('username'),
         )
 
+        # Then create the client profile using the submitted form data
         Client.objects.create(
             user=user,
             email=request.POST.get('email'),
@@ -83,6 +90,7 @@ def create_client(request):
         'food_groups': food_groups,
     })
 
+
 def list_active_foods(request):
     food_groups = FoodGroup.objects.all()
     products = Product.objects.all()
@@ -90,6 +98,7 @@ def list_active_foods(request):
     sort = request.GET.get('sort', 'name').strip()
     direction = request.GET.get('direction', 'asc').strip()
 
+    # Only allow sorting by safe predefined fields
     allowed_sorts = {
         'name': 'food_name_spanish',
         'group': 'food_group__name',
@@ -104,26 +113,45 @@ def list_active_foods(request):
     current_direction = 'desc' if direction == 'desc' else 'asc'
 
     order_field = allowed_sorts[current_sort]
+
+    # Django uses "-" before a field name for descending order
     if current_direction == 'desc':
         order_field = f'-{order_field}'
 
     products = products.order_by(order_field)
 
+    # Keep current query parameters when changing pages
+    page_params = request.GET.copy()
+    page_params.pop('page', None)
+
+    # Keep filters, but remove current sorting values when changing sort column
+    sort_params = request.GET.copy()
+    sort_params.pop('page', None)
+    sort_params.pop('sort', None)
+    sort_params.pop('direction', None)
+
+    page_url_prefix = f'?{page_params.urlencode()}&' if page_params else '?'
+    sort_url_prefix = f'?{sort_params.urlencode()}&' if sort_params else '?'
+
     paginator = Paginator(products, 100)
     page_number = request.GET.get('page')
     products = paginator.get_page(page_number)
 
-    return render(request, 'admin/list_active_foods.html',  {
+    return render(request, 'admin/list_active_foods.html', {
         'food_groups': food_groups,
         'products': products,
         'current_sort': current_sort,
         'current_direction': current_direction,
+        'page_url_prefix': page_url_prefix,
+        'sort_url_prefix': sort_url_prefix,
     })
+
 
 def create_food(request):
     food_groups = FoodGroup.objects.all()
     super_groups = SuperGroup.objects.all()
 
+    # Maps form input names to Micronutrient names stored in the database
     micronutrient_fields = {
         'water': 'Agua',
         'fiber': 'Fibra',
@@ -199,6 +227,7 @@ def create_food(request):
     }
 
     def get_decimal_value(field_name):
+        # Convert empty or invalid numeric inputs to Decimal zero
         raw_value = request.POST.get(field_name, '').strip()
         if raw_value == '':
             return Decimal('0.00')
@@ -213,12 +242,13 @@ def create_food(request):
         english_name = request.POST.get('english_name', '').strip()
         super_group_ids = request.POST.getlist('super_group')
 
-
+        # Load micronutrients once and access them by name during product creation
         micronutrients = {
             micronutrient.name: micronutrient
             for micronutrient in Micronutrient.objects.all()
         }
 
+        # Ensure the product and its micronutrients are created as one atomic operation
         with transaction.atomic():
             product = Product.objects.create(
                 food_name=name,
@@ -233,10 +263,10 @@ def create_food(request):
                 food_group_id=request.POST.get('food_group') or None,
             )
 
-            
             if super_group_ids:
                 product.super_groups.set(super_group_ids)
 
+            # Create only micronutrient values that are present and greater than zero
             for input_name, micronutrient_name in micronutrient_fields.items():
                 micronutrient = micronutrients.get(micronutrient_name)
                 if not micronutrient:
@@ -256,4 +286,70 @@ def create_food(request):
     return render(request, 'admin/create_food.html', {
         'food_groups': food_groups,
         'super_groups': super_groups,
+    })
+
+
+def list_clients(request):
+    clients = Client.objects.all()
+
+    first_name = request.GET.get('first_name', '').strip()
+    last_name = request.GET.get('last_name', '').strip()
+    dni = request.GET.get('dni', '').strip()
+
+    # Apply filters only when the corresponding field has a value
+    if first_name:
+        clients = clients.filter(first_name__icontains=first_name)
+
+    if last_name:
+        clients = clients.filter(last_name__icontains=last_name)
+
+    if dni:
+        clients = clients.filter(dni__icontains=dni)
+
+    sort = request.GET.get('sort', 'name').strip()
+    direction = request.GET.get('direction', 'asc').strip()
+
+    # Public sort keys are mapped to real model fields
+    allowed_sorts = {
+        'dni': 'dni',
+        'name': 'first_name',
+        'last_name': 'last_name',
+        'contact': 'email',
+    }
+
+    current_sort = sort if sort in allowed_sorts else 'name'
+    current_direction = 'desc' if direction == 'desc' else 'asc'
+
+    order_field = allowed_sorts[current_sort]
+    if current_direction == 'desc':
+        order_field = f'-{order_field}'
+
+    clients = clients.order_by(order_field)
+
+    # Preserve active filters and sorting while navigating between pages
+    page_params = request.GET.copy()
+    page_params.pop('page', None)
+
+    # Preserve filters while replacing the current sorting parameters
+    sort_params = request.GET.copy()
+    sort_params.pop('page', None)
+    sort_params.pop('sort', None)
+    sort_params.pop('direction', None)
+
+    page_url_prefix = f'?{page_params.urlencode()}&' if page_params else '?'
+    sort_url_prefix = f'?{sort_params.urlencode()}&' if sort_params else '?'
+
+    paginator = Paginator(clients, 100)
+    page_number = request.GET.get('page')
+    clients = paginator.get_page(page_number)
+
+    return render(request, 'admin/list_clients.html', {
+        'clients': clients,
+        'current_sort': current_sort,
+        'current_direction': current_direction,
+        'first_name': first_name,
+        'last_name': last_name,
+        'dni': dni,
+        'page_url_prefix': page_url_prefix,
+        'sort_url_prefix': sort_url_prefix,
     })
