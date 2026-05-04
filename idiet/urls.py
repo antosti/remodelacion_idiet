@@ -28,6 +28,7 @@ urlpatterns = [
     path('list-active-foods/', views.list_active_foods, name='list_active_foods'),
     path('create-food/', views.create_food, name='create_food'),
     path('list-clients/', views.list_clients, name='list_clients'),
+    path('list-deactive-clients/', views.list_deactive_clients, name='list_deactive_clients'),
     
 
 

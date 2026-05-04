@@ -92,15 +92,23 @@ def create_client(request):
         'food_groups': food_groups,
     })
 
+def paginate_queryset(request, queryset, per_page=100):
+    page_params = request.GET.copy()
+    page_params.pop('page', None)
 
-def list_active_foods(request):
-    food_groups = FoodGroup.objects.all()
-    products = Product.objects.all()
+    paginator = Paginator(queryset, per_page)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
 
+    return {
+        'page_obj': page_obj,
+        'page_url_prefix': f'?{page_params.urlencode()}&' if page_params else '?',
+    }
+
+def get_foods_list_context(request, products):
     sort = request.GET.get('sort', 'name').strip()
     direction = request.GET.get('direction', 'asc').strip()
 
-    # Only allow sorting by safe predefined fields
     allowed_sorts = {
         'name': 'food_name_spanish',
         'group': 'food_group__name',
@@ -116,37 +124,33 @@ def list_active_foods(request):
 
     order_field = allowed_sorts[current_sort]
 
-    # Django uses "-" before a field name for descending order
     if current_direction == 'desc':
         order_field = f'-{order_field}'
 
     products = products.order_by(order_field)
 
-    # Keep current query parameters when changing pages
-    page_params = request.GET.copy()
-    page_params.pop('page', None)
-
-    # Keep filters, but remove current sorting values when changing sort column
     sort_params = request.GET.copy()
     sort_params.pop('page', None)
     sort_params.pop('sort', None)
     sort_params.pop('direction', None)
 
-    page_url_prefix = f'?{page_params.urlencode()}&' if page_params else '?'
-    sort_url_prefix = f'?{sort_params.urlencode()}&' if sort_params else '?'
+    pagination = paginate_queryset(request, products)
 
-    paginator = Paginator(products, 100)
-    page_number = request.GET.get('page')
-    products = paginator.get_page(page_number)
-
-    return render(request, 'admin/list_active_foods.html', {
-        'food_groups': food_groups,
-        'products': products,
+    return {
+        'products': pagination['page_obj'],
         'current_sort': current_sort,
         'current_direction': current_direction,
-        'page_url_prefix': page_url_prefix,
-        'sort_url_prefix': sort_url_prefix,
-    })
+        'page_url_prefix': pagination['page_url_prefix'],
+        'sort_url_prefix': f'?{sort_params.urlencode()}&' if sort_params else '?',
+    }
+
+def list_active_foods(request):
+    products = Product.objects.all()
+
+    context = get_foods_list_context(request, products)
+    context['food_groups'] = FoodGroup.objects.all()
+
+    return render(request, 'admin/list_active_foods.html', context)
 
 
 def create_food(request):
@@ -290,15 +294,11 @@ def create_food(request):
         'super_groups': super_groups,
     })
 
-
-def list_clients(request):
-    clients = Client.objects.all()
-
+def get_clients_list_context(request, clients):
     first_name = request.GET.get('first_name', '').strip()
     last_name = request.GET.get('last_name', '').strip()
     dni = request.GET.get('dni', '').strip()
 
-    # Apply filters only when the corresponding field has a value
     if first_name:
         clients = clients.filter(first_name__icontains=first_name)
 
@@ -311,7 +311,6 @@ def list_clients(request):
     sort = request.GET.get('sort', 'name').strip()
     direction = request.GET.get('direction', 'asc').strip()
 
-    # Public sort keys are mapped to real model fields
     allowed_sorts = {
         'dni': 'dni',
         'name': 'first_name',
@@ -323,35 +322,37 @@ def list_clients(request):
     current_direction = 'desc' if direction == 'desc' else 'asc'
 
     order_field = allowed_sorts[current_sort]
+
     if current_direction == 'desc':
         order_field = f'-{order_field}'
 
     clients = clients.order_by(order_field)
 
-    # Preserve active filters and sorting while navigating between pages
-    page_params = request.GET.copy()
-    page_params.pop('page', None)
-
-    # Preserve filters while replacing the current sorting parameters
     sort_params = request.GET.copy()
     sort_params.pop('page', None)
     sort_params.pop('sort', None)
     sort_params.pop('direction', None)
 
-    page_url_prefix = f'?{page_params.urlencode()}&' if page_params else '?'
-    sort_url_prefix = f'?{sort_params.urlencode()}&' if sort_params else '?'
+    pagination = paginate_queryset(request, clients)
 
-    paginator = Paginator(clients, 100)
-    page_number = request.GET.get('page')
-    clients = paginator.get_page(page_number)
-
-    return render(request, 'admin/list_clients.html', {
-        'clients': clients,
+    return {
+        'clients': pagination['page_obj'],
         'current_sort': current_sort,
         'current_direction': current_direction,
         'first_name': first_name,
         'last_name': last_name,
         'dni': dni,
-        'page_url_prefix': page_url_prefix,
-        'sort_url_prefix': sort_url_prefix,
-    })
+        'page_url_prefix': pagination['page_url_prefix'],
+        'sort_url_prefix': f'?{sort_params.urlencode()}&' if sort_params else '?',
+    }
+
+def list_clients(request):
+    clients = Client.objects.select_related('user').filter(user__is_active=True)
+    context = get_clients_list_context(request, clients)
+    return render(request, 'admin/list_clients.html', context)
+
+
+def list_deactive_clients(request):
+    clients = Client.objects.select_related('user').filter(user__is_active=False)
+    context = get_clients_list_context(request, clients)
+    return render(request, 'admin/list_deactive_clients.html', context)
