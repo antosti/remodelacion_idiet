@@ -14,7 +14,6 @@ from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 
 
@@ -356,27 +355,3 @@ def list_clients(request):
         'page_url_prefix': page_url_prefix,
         'sort_url_prefix': sort_url_prefix,
     })
-
-def login_view(request):
-    if request.method == "POST":
-        email = request.POST.get("email")
-        password = request.POST.get("password")
-
-        user = authenticate(
-            request,
-            username=email,
-            password=password
-        )
-
-        if user is not None:
-            login(request, user)
-            return redirect("admin-home")
-        else:
-            messages.error(request, "Email o contraseña incorrectos")
-
-    return render(request, "login.html")
-
-def logout_view(request):
-    logout(request)
-    return redirect("home")
-

@@ -28,8 +28,10 @@ urlpatterns = [
     path('list-active-foods/', views.list_active_foods, name='list_active_foods'),
     path('create-food/', views.create_food, name='create_food'),
     path('list-clients/', views.list_clients, name='list_clients'),
-    path('login/', views.login_view, name='login'),
-    path('logout/', views.logout_view, name='logout'),
+    
+
+
+    path('', include('Users.urls')),
     # path('about/',),
     # path('users/', include('Users.urls')),
     # path('clients/', include('Clients.urls')),
