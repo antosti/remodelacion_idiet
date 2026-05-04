@@ -4,3 +4,4 @@ venv/
 */migrations/
 node_modules/
 *.log
+static/dist/style.css
