@@ -18,6 +18,7 @@ def login_view(request):
 
         if user is not None:
             login(request, user)
+            messages.success(request, "Inicio de sesión correcto")
             return redirect("admin-home")
         else:
             messages.error(request, "Email o contraseña incorrectos")
