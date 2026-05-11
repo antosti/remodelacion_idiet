@@ -272,136 +272,24 @@
                     <h2 class="text-lg font-semibold mb-4 text-gray-700">Información nutricional (100g)</h2>
 
                     <div class="space-y-6">
+                        {% for section in micronutrient_sections %}
                         <div>
-                            <h3 class="text-sm font-semibold text-idiet mb-3">General</h3>
+                            <h3 class="text-sm font-semibold text-idiet mb-3">{{ section.title }}</h3>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {% for micronutrient in section.micronutrients %}
                                 <div>
-                                    <label class="block mb-1 text-sm font-semibold text-gray-700">Agua (g)</label>
-                                    <input type="number" step="0.01" value="0" readonly
-                                        class="w-full border rounded-lg px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none">
-                                </div>
+                                    <label class="block mb-1 text-sm font-semibold text-gray-700">
+                                        {{ micronutrient.name }} ({{ micronutrient.unit }})
+                                    </label>
 
-                                <div>
-                                    <label class="block mb-1 text-sm font-semibold text-gray-700">Hidratos de carbono,
-                                        Total (g)</label>
                                     <input type="number" step="0.01" value="0" readonly
                                         class="w-full border rounded-lg px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none">
                                 </div>
-
-                                <div>
-                                    <label class="block mb-1 text-sm font-semibold text-gray-700">Fibra (g)</label>
-                                    <input type="number" step="0.01" value="0" readonly
-                                        class="w-full border rounded-lg px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none">
-                                </div>
-
-                                <div>
-                                    <label class="block mb-1 text-sm font-semibold text-gray-700">Proteínas, total
-                                        (g)</label>
-                                    <input type="number" step="0.01" value="0" readonly
-                                        class="w-full border rounded-lg px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none">
-                                </div>
-
-                                <div>
-                                    <label class="block mb-1 text-sm font-semibold text-gray-700">Grasas, total
-                                        (g)</label>
-                                    <input type="number" step="0.01" value="0" readonly
-                                        class="w-full border rounded-lg px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none">
-                                </div>
-
-                                <div>
-                                    <label class="block mb-1 text-sm font-semibold text-gray-700">Colesterol
-                                        (mg)</label>
-                                    <input type="number" step="0.01" value="0" readonly
-                                        class="w-full border rounded-lg px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none">
-                                </div>
+                                {% endfor %}
                             </div>
                         </div>
-
-                        <div>
-                            <h3 class="text-sm font-semibold text-idiet mb-3">Vitaminas y otros</h3>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block mb-1 text-sm font-semibold text-gray-700">Vit A (ug)</label>
-                                    <input type="number" step="0.01" value="0" readonly
-                                        class="w-full border rounded-lg px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none">
-                                </div>
-
-                                <div>
-                                    <label class="block mb-1 text-sm font-semibold text-gray-700">Carotenos (mg)</label>
-                                    <input type="number" step="0.01" value="0" readonly
-                                        class="w-full border rounded-lg px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none">
-                                </div>
-
-                                <div>
-                                    <label class="block mb-1 text-sm font-semibold text-gray-700">Tiamina B1
-                                        (mg)</label>
-                                    <input type="number" step="0.01" value="0" readonly
-                                        class="w-full border rounded-lg px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none">
-                                </div>
-
-                                <div>
-                                    <label class="block mb-1 text-sm font-semibold text-gray-700">Vit C (mg)</label>
-                                    <input type="number" step="0.01" value="0" readonly
-                                        class="w-full border rounded-lg px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none">
-                                </div>
-
-                                <div>
-                                    <label class="block mb-1 text-sm font-semibold text-gray-700">Vit D (ug)</label>
-                                    <input type="number" step="0.01" value="0" readonly
-                                        class="w-full border rounded-lg px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none">
-                                </div>
-
-                                <div>
-                                    <label class="block mb-1 text-sm font-semibold text-gray-700">Vit K (ug)</label>
-                                    <input type="number" step="0.01" value="0" readonly
-                                        class="w-full border rounded-lg px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <h3 class="text-sm font-semibold text-idiet mb-3">Minerales</h3>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block mb-1 text-sm font-semibold text-gray-700">Sodio (mg)</label>
-                                    <input type="number" step="0.01" value="0" readonly
-                                        class="w-full border rounded-lg px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none">
-                                </div>
-
-                                <div>
-                                    <label class="block mb-1 text-sm font-semibold text-gray-700">Potasio (mg)</label>
-                                    <input type="number" step="0.01" value="0" readonly
-                                        class="w-full border rounded-lg px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none">
-                                </div>
-
-                                <div>
-                                    <label class="block mb-1 text-sm font-semibold text-gray-700">Magnesio (mg)</label>
-                                    <input type="number" step="0.01" value="0" readonly
-                                        class="w-full border rounded-lg px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none">
-                                </div>
-
-                                <div>
-                                    <label class="block mb-1 text-sm font-semibold text-gray-700">Calcio (mg)</label>
-                                    <input type="number" step="0.01" value="0" readonly
-                                        class="w-full border rounded-lg px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none">
-                                </div>
-
-                                <div>
-                                    <label class="block mb-1 text-sm font-semibold text-gray-700">Hierro (mg)</label>
-                                    <input type="number" step="0.01" value="0" readonly
-                                        class="w-full border rounded-lg px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none">
-                                </div>
-
-                                <div>
-                                    <label class="block mb-1 text-sm font-semibold text-gray-700">Zinc (mg)</label>
-                                    <input type="number" step="0.01" value="0" readonly
-                                        class="w-full border rounded-lg px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none">
-                                </div>
-                            </div>
-                        </div>
+                        {% endfor %}
                     </div>
                 </div>
             </div>
