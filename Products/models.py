@@ -17,6 +17,7 @@ class Product(models.Model):
     fat_g = models.DecimalField(max_digits=10, decimal_places=2)
     food_group = models.ForeignKey(FoodGroup, on_delete=models.SET_NULL, null=True, blank=True)
     super_groups = models.ManyToManyField(SuperGroup, blank=True)
+    is_active = models.BooleanField(default=True)
 
     # Many to many relationship with Micronutrient
     micronutrients = models.ManyToManyField(
