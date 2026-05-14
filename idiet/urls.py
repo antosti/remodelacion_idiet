@@ -24,15 +24,11 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.home_page, name='home'),
     path('admin-home/', views.admin_home, name='admin-home'),
-    path('create-client/', views.create_client, name='create_client'),
-    path('list-active-foods/', views.list_active_foods, name='list_active_foods'),
-    path('create-food/', views.create_food, name='create_food'),
-    path('list-clients/', views.list_clients, name='list_clients'),
-    path('list-deactive-clients/', views.list_deactive_clients, name='list_deactive_clients'),
-    
-
 
     path('', include('Users.urls')),
+    path('', include('Products.urls')),
+    path('', include('Clients.urls')),
+    path('', include('Dishes.urls')),
     # path('about/',),
     # path('users/', include('Users.urls')),
     # path('clients/', include('Clients.urls')),

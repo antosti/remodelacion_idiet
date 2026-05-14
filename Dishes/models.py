@@ -8,6 +8,7 @@ class Dish(models.Model):
     name = models.CharField(max_length=200)
     recipe_elaboration = models.TextField(max_length=99999)
     language = models.CharField(max_length=50)
+    active = models.BooleanField(default=True)
     
     # Many to many relationship with Products
     product = models.ManyToManyField(Product, through='DishProduct')
