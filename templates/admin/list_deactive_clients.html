@@ -207,6 +207,7 @@
             </table>
         </div>
 
+        {% if clients.paginator.count > 0 %}
         <div
             class="mt-5 flex flex-col gap-4 border-t border-gray-200 pt-4 md:flex-row md:items-center md:justify-between">
             <p class="text-sm text-gray-600">
@@ -215,6 +216,7 @@
             </p>
 
             <div class="flex flex-wrap items-center md:justify-end">
+
                 {% if clients.has_previous %}
                 <a href="{{ page_url_prefix }}page={{ clients.previous_page_number }}"
                     class="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-l-lg bg-white hover:bg-gray-50">
@@ -226,48 +228,33 @@
                 </span>
                 {% endif %}
 
-                {% if clients.number > 3 %}
-                <a href="{{ page_url_prefix }}page=1"
-                    class="px-4 py-2 text-sm text-gray-700 border-t border-b border-r border-gray-300 bg-white hover:bg-gray-50">
-                    1
-                </a>
-                {% if clients.number > 4 %}
-                <span class="px-4 py-2 text-sm text-gray-500 border-t border-b border-r border-gray-300 bg-white">
-                    ...
-                </span>
-                {% endif %}
-                {% endif %}
+                {% for page_num in clients.paginator.page_range %}
 
-                {% if clients.has_previous %}
-                <a href="{{ page_url_prefix }}page={{ clients.previous_page_number }}"
-                    class="px-4 py-2 text-sm text-gray-700 border-t border-b border-r border-gray-300 bg-white hover:bg-gray-50">
-                    {{ clients.previous_page_number }}
-                </a>
-                {% endif %}
-
+                {% if page_num == clients.number %}
                 <span
                     class="px-4 py-2 text-sm font-semibold text-white border-t border-b border-r border-gray-300 bg-idiet">
-                    {{ clients.number }}
+                    {{ page_num }}
                 </span>
 
-                {% if clients.has_next %}
-                <a href="{{ page_url_prefix }}page={{ clients.next_page_number }}"
+                {% elif page_num == 1 or page_num == clients.paginator.num_pages %}
+                <a href="{{ page_url_prefix }}page={{ page_num }}"
                     class="px-4 py-2 text-sm text-gray-700 border-t border-b border-r border-gray-300 bg-white hover:bg-gray-50">
-                    {{ clients.next_page_number }}
+                    {{ page_num }}
                 </a>
-                {% endif %}
 
-                {% if clients.number < clients.paginator.num_pages|add:"-2" %} {% if clients.number < clients.paginator.num_pages|add:"-3" %} <span
-                    class="px-4 py-2 text-sm text-gray-500 border-t border-b border-r border-gray-300 bg-white">
-                    ...
+                {% elif page_num >= clients.number|add:"-1" and page_num <= clients.number|add:"1" %} <a
+                    href="{{ page_url_prefix }}page={{ page_num }}"
+                    class="px-4 py-2 text-sm text-gray-700 border-t border-b border-r border-gray-300 bg-white hover:bg-gray-50">
+                    {{ page_num }}
+                    </a>
+
+                    {% elif page_num == clients.number|add:"-2" or page_num == clients.number|add:"2" %}
+                    <span class="px-4 py-2 text-sm text-gray-500 border-t border-b border-r border-gray-300 bg-white">
+                        ...
                     </span>
                     {% endif %}
 
-                    <a href="{{ page_url_prefix }}page={{ clients.paginator.num_pages }}"
-                        class="px-4 py-2 text-sm text-gray-700 border-t border-b border-r border-gray-300 bg-white hover:bg-gray-50">
-                        {{ clients.paginator.num_pages }}
-                    </a>
-                    {% endif %}
+                    {% endfor %}
 
                     {% if clients.has_next %}
                     <a href="{{ page_url_prefix }}page={{ clients.next_page_number }}"
@@ -279,8 +266,10 @@
                         Siguiente
                     </span>
                     {% endif %}
+
             </div>
         </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

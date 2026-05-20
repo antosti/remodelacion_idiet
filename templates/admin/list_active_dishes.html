@@ -301,6 +301,7 @@
             </p>
 
             <div class="flex flex-wrap items-center md:justify-end">
+
                 {% if dish_list.has_previous %}
                 <a href="{{ page_url_prefix }}page={{ dish_list.previous_page_number }}"
                     class="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-l-lg bg-white hover:bg-gray-50">
@@ -312,49 +313,33 @@
                 </span>
                 {% endif %}
 
-                {% if dish_list.number > 3 %}
-                <a href="{{ page_url_prefix }}page=1"
-                    class="px-4 py-2 text-sm text-gray-700 border-t border-b border-r border-gray-300 bg-white hover:bg-gray-50">
-                    1
-                </a>
+                {% for page_num in dish_list.paginator.page_range %}
 
-                {% if dish_list.number > 4 %}
-                <span class="px-4 py-2 text-sm text-gray-500 border-t border-b border-r border-gray-300 bg-white">
-                    ...
-                </span>
-                {% endif %}
-                {% endif %}
-
-                {% if dish_list.has_previous %}
-                <a href="{{ page_url_prefix }}page={{ dish_list.previous_page_number }}"
-                    class="px-4 py-2 text-sm text-gray-700 border-t border-b border-r border-gray-300 bg-white hover:bg-gray-50">
-                    {{ dish_list.previous_page_number }}
-                </a>
-                {% endif %}
-
+                {% if page_num == dish_list.number %}
                 <span
                     class="px-4 py-2 text-sm font-semibold text-white border-t border-b border-r border-gray-300 bg-idiet">
-                    {{ dish_list.number }}
+                    {{ page_num }}
                 </span>
 
-                {% if dish_list.has_next %}
-                <a href="{{ page_url_prefix }}page={{ dish_list.next_page_number }}"
+                {% elif page_num == 1 or page_num == dish_list.paginator.num_pages %}
+                <a href="{{ page_url_prefix }}page={{ page_num }}"
                     class="px-4 py-2 text-sm text-gray-700 border-t border-b border-r border-gray-300 bg-white hover:bg-gray-50">
-                    {{ dish_list.next_page_number }}
+                    {{ page_num }}
                 </a>
-                {% endif %}
 
-                {% if dish_list.number < dish_list.paginator.num_pages|add:"-2" %} {% if dish_list.number < dish_list.paginator.num_pages|add:"-3" %} <span
-                    class="px-4 py-2 text-sm text-gray-500 border-t border-b border-r border-gray-300 bg-white">
-                    ...
+                {% elif page_num >= dish_list.number|add:"-1" and page_num <= dish_list.number|add:"1" %} <a
+                    href="{{ page_url_prefix }}page={{ page_num }}"
+                    class="px-4 py-2 text-sm text-gray-700 border-t border-b border-r border-gray-300 bg-white hover:bg-gray-50">
+                    {{ page_num }}
+                    </a>
+
+                    {% elif page_num == dish_list.number|add:"-2" or page_num == dish_list.number|add:"2" %}
+                    <span class="px-4 py-2 text-sm text-gray-500 border-t border-b border-r border-gray-300 bg-white">
+                        ...
                     </span>
                     {% endif %}
 
-                    <a href="{{ page_url_prefix }}page={{ dish_list.paginator.num_pages }}"
-                        class="px-4 py-2 text-sm text-gray-700 border-t border-b border-r border-gray-300 bg-white hover:bg-gray-50">
-                        {{ dish_list.paginator.num_pages }}
-                    </a>
-                    {% endif %}
+                    {% endfor %}
 
                     {% if dish_list.has_next %}
                     <a href="{{ page_url_prefix }}page={{ dish_list.next_page_number }}"
@@ -366,6 +351,7 @@
                         Siguiente
                     </span>
                     {% endif %}
+
             </div>
         </div>
         {% endif %}
