@@ -25,9 +25,7 @@
 
         <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
             <h2 class="text-lg font-semibold mb-4 text-gray-700">Datos básicos</h2>
-
-            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-
+            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                 <div>
                     <label class="block mb-1 text-sm font-semibold text-gray-700">DNI</label>
                     <input type="text" name="dni" placeholder="12345678A"
@@ -47,92 +45,90 @@
                 </div>
 
                 <div>
-                    <label class="block mb-1 text-sm font-semibold text-gray-700">Usuario</label>
-                    <input type="text" name="username" placeholder="juanperez"
-                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
-                </div>
-
-                <div>
                     <label class="block mb-1 text-sm font-semibold text-gray-700">Email</label>
                     <input type="email" name="email" placeholder="juan@email.com"
                         class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
                 </div>
-
-                <div>
-                    <label class="block mb-1 text-sm font-semibold text-gray-700">Peso (kg)</label>
-                    <input type="number" name="weight" placeholder="75"
-                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
-                </div>
-
-                <div>
-                    <label class="block mb-1 text-sm font-semibold text-gray-700">Sexo</label>
-                    <select name="gender"
-                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
-                        <option value="">Seleccionar</option>
-                        <option value="Male">Masculino</option>
-                        <option value="Female">Femenino</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block mb-1 text-sm font-semibold text-gray-700">Altura (cm)</label>
-                    <input type="number" name="height" placeholder="175"
-                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
-                </div>
-
-                <div>
-                    <label class="block mb-1 text-sm font-semibold text-gray-700">Actividad</label>
-                    <select name="activity_level"
-                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
-                        <option value="">Seleccionar</option>
-                        <option value="Reposo">Reposo</option>
-                        <option value="Ligera">Ligera</option>
-                        <option value="Moderada">Moderada</option>
-                        <option value="Intensa">Intensa</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block mb-1 text-sm font-semibold text-gray-700">Fecha de nacimiento</label>
-                    <input type="date" name="birth_date"
-                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
-                </div>
-
-                <div>
-                    <label class="block mb-1 text-sm font-semibold text-gray-700">Actividad extra</label>
-                    <input type="text" name="additional_activity" placeholder="Ej: fútbol 2 veces/semana"
-                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
-                </div>
-
             </div>
         </div>
 
-        <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-semibold text-gray-700">Información</h2>
-                <button type="button" class="px-3 py-1 border rounded-lg bg-secondary text-white">Modificar</button>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+                <h2 class="text-lg font-semibold mb-4 text-gray-700">Datos físicos y actividad</h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block mb-1 text-sm font-semibold text-gray-700">Peso (kg)</label>
+                        <input type="number" name="weight" placeholder="75"
+                            class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                    </div>
+
+                    <div>
+                        <label class="block mb-1 text-sm font-semibold text-gray-700">Altura (cm)</label>
+                        <input type="number" name="height" placeholder="175"
+                            class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                    </div>
+
+                    <div>
+                        <label class="block mb-1 text-sm font-semibold text-gray-700">Fecha de nacimiento</label>
+                        <input type="date" name="birth_date"
+                            class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                    </div>
+
+                    <div>
+                        <label class="block mb-1 text-sm font-semibold text-gray-700">Sexo</label>
+                        <select name="gender"
+                            class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                            <option value="">Seleccionar</option>
+                            <option value="Male">Masculino</option>
+                            <option value="Female">Femenino</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block mb-1 text-sm font-semibold text-gray-700">Actividad</label>
+                        <select name="activity_level"
+                            class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                            <option value="">Seleccionar</option>
+                            <option value="Reposo">Reposo</option>
+                            <option value="Ligera">Ligera</option>
+                            <option value="Moderada">Moderada</option>
+                            <option value="Intensa">Intensa</option>
+                        </select>
+                    </div>
+                </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                    <label class="block mb-1 text-sm font-semibold text-gray-700">Metabolismo basal</label>
-                    <input type="number" step="0.01" name="metabolismo_basal" placeholder="1500"
-                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+            <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-gray-700">Información</h2>
+                    <button type="button" class="px-3 py-1 border rounded-lg bg-secondary text-white">
+                        Modificar
+                    </button>
                 </div>
 
-                <div>
-                    <label class="block mb-1 text-sm font-semibold text-gray-700">Gasto energético</label>
-                    <input type="number" step="0.01" name="gasto_energetico" placeholder="2200"
-                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
-                </div>
+                <div class="grid grid-cols-1 gap-4">
+                    <div>
+                        <label class="block mb-1 text-sm font-semibold text-gray-700">Metabolismo basal</label>
+                        <input type="number" step="0.01" name="metabolismo_basal" placeholder="1500" readonly
+                            class="border rounded-lg px-3 py-2 w-full bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none">
+                    </div>
 
-                <div>
-                    <label class="block mb-1 text-sm font-semibold text-gray-700">IMC</label>
-                    <input type="number" step="0.01" name="imc" placeholder="24.5"
-                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                    <div>
+                        <label class="block mb-1 text-sm font-semibold text-gray-700">Gasto energético</label>
+                        <input type="number" step="0.01" name="gasto_energetico" placeholder="2200" readonly
+                            class="border rounded-lg px-3 py-2 w-full bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block mb-1 text-sm font-semibold text-gray-700">IMC</label>
+                        <input type="number" step="0.01" name="imc" placeholder="24.5" readonly
+                            class="border rounded-lg px-3 py-2 w-full bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none">
+                    </div>
                 </div>
             </div>
         </div>
+
 
         <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
             <div class="flex items-center justify-between mb-4">

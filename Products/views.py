@@ -13,7 +13,7 @@ from idiet.views import paginate_queryset
 FOOD_MICRONUTRIENT_SECTIONS = [
     {
         'title': 'General',
-        'ids': [1, 2, 3, 4, 5, 6, 7],
+        'ids': [3, 1, 2, 4, 5, 6, 7],
     },
     {
         'title': 'Vitaminas y otros',
