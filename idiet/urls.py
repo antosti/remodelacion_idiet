@@ -30,6 +30,7 @@ urlpatterns = [
     path('', include('Clients.urls')),
     path('', include('Dishes.urls')),
     path('', include('Intakes.urls')),
+    path('', include('Plantillas.urls')),
     # path('about/',),
     # path('users/', include('Users.urls')),
     # path('clients/', include('Clients.urls')),

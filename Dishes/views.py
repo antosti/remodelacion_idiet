@@ -77,11 +77,13 @@ def create_dish(request):
     micronutrient_sections = get_micronutrient_sections()
 
     if request.method == 'POST':
-        Dish.objects.create(
+        dish = Dish.objects.create(
             name=request.POST.get('recipe_name'),
             recipe_elaboration=request.POST.get('description'),
             language='es',
         )
+
+        dish.intakes.set(request.POST.getlist('intakes'))
 
         return redirect('create_dish')
 
