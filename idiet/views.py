@@ -21,7 +21,7 @@ def home_page(request):
     # return HttpResponse("Hello world! This is the home page.")
     return render(request, 'home.html')
 
-
+@login_required
 def admin_home(request):
     # Dashboard counters
     client = Client.objects.all().count()

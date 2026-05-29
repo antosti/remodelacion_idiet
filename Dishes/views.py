@@ -7,6 +7,7 @@ from Dishes.models import Dish
 from Micronutrients.models import Micronutrient
 from Products.models import Product
 from idiet.views import paginate_queryset
+from django.contrib.auth.decorators import login_required
 
 
 MICRONUTRIENT_SECTIONS = [
@@ -71,7 +72,7 @@ def get_micronutrient_sections():
 
     return sections
 
-
+@login_required
 def create_dish(request):
     intakes = Intake.objects.all().order_by('order')
     micronutrient_sections = get_micronutrient_sections()
@@ -238,12 +239,13 @@ def get_dish_context(request, active=True):
         'sort_url_prefix': f'?{sort_params.urlencode()}&' if sort_params else '?',
     }
 
-
+@login_required
 def list_active_dishes(request):
     context = get_dish_context(request, active=True)
     return render(request, 'admin/list_active_dishes.html', context)
 
 
+@login_required
 def list_deactive_dishes(request):
     context = get_dish_context(request, active=False)
     return render(request, 'admin/list_deactive_dishes.html', context)

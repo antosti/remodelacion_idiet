@@ -4,8 +4,9 @@ from Dishes.models import Dish
 from Intakes.models import Intake
 from Products.models import Product
 from idiet.views import paginate_queryset
+from django.contrib.auth.decorators import login_required
 
-
+@login_required
 def edit_intakes(request):
     intake_filter = request.GET.get('intake_filter', '').strip()
     dish_name = request.GET.get('dish_name', '').strip()

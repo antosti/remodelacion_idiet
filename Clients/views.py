@@ -1,10 +1,13 @@
+from django.contrib import messages
+
 from django.shortcuts import render, redirect
 from Users.models import User
 from Clients.models import Client
 from FoodGroup.models import FoodGroup
 from idiet.views import paginate_queryset
+from django.contrib.auth.decorators import login_required
 
-# Create your views here.
+@login_required
 def create_client(request):
     food_groups = FoodGroup.objects.all()
 
@@ -14,11 +17,11 @@ def create_client(request):
             email=request.POST.get('email'),
             first_name=request.POST.get('first_name'),
             last_name=request.POST.get('last_name'),
-            username=request.POST.get('username'),
+            username=request.POST.get('first_name'),
         )
 
         # Then create the client profile using the submitted form data
-        Client.objects.create(
+        client = Client.objects.create(
             user=user,
             email=request.POST.get('email'),
             first_name=request.POST.get('first_name'),
@@ -36,12 +39,18 @@ def create_client(request):
             activity_level=request.POST.get('activity_level'),
         )
 
+        if(user is not None and client is not None):
+            messages.success(request, "Cliente creado correctamente")
+        else:
+            messages.error(request, "Error al crear el cliente")
+
         return redirect('create_client')
 
     return render(request, 'admin/create_client.html', {
         'food_groups': food_groups,
     })
 
+@login_required
 def get_clients_list_context(request, clients):
     first_name = request.GET.get('first_name', '').strip()
     last_name = request.GET.get('last_name', '').strip()
@@ -94,12 +103,14 @@ def get_clients_list_context(request, clients):
         'sort_url_prefix': f'?{sort_params.urlencode()}&' if sort_params else '?',
     }
 
+@login_required
 def list_active_clients(request):
     clients = Client.objects.select_related('user').filter(user__is_active=True)
     context = get_clients_list_context(request, clients)
     return render(request, 'admin/list_active_clients.html', context)
 
 
+@login_required
 def list_deactive_clients(request):
     clients = Client.objects.select_related('user').filter(user__is_active=False)
     context = get_clients_list_context(request, clients)

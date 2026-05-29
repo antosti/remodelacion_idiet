@@ -24,7 +24,7 @@
                     <div class="divide-y divide-secondary/80">
                         <div class="space-y-3 pt-2 pb-8 text-secondary">
                             <div class="-mx-3">
-                                <a href="#"
+                                <a href="{% url 'admin-home' %}"
                                     class="flex items-center gap-3 rounded-xl px-4 py-2.5 text-base/7 font-semibold text-gray-200 hover:bg-white/10">
                                     <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none"
                                         xmlns="http://www.w3.org/2000/svg">
@@ -72,11 +72,11 @@
                                     </svg>
                                 </summary>
                                 <div class="ml-4 mt-2 space-y-1 border-l border-secondary/60 pl-3">
-                                    <a href="#"
+                                    <a href="{% url 'list_active_clients'%}"
                                         class="block rounded-lg px-4 py-2 text-sm font-medium text-gray-300 hover:bg-white/10">Activos</a>
-                                    <a href="#"
+                                    <a href="{% url 'list_deactive_clients' %}"
                                         class="block rounded-lg px-4 py-2 text-sm font-medium text-gray-300 hover:bg-white/10">Desactivados</a>
-                                    <a href="#"
+                                    <a href="{% url 'create_client' %}"
                                         class="block rounded-lg px-4 py-2 text-sm font-medium text-gray-300 hover:bg-white/10">Crear
                                         Cliente</a>
                                 </div>
@@ -127,14 +127,14 @@
                                     </svg>
                                 </summary>
                                 <div class="ml-4 mt-2 space-y-1 border-l border-secondary/60 pl-3">
-                                    <a href="#"
+                                    <a href="{% url 'list_active_dishes' %}"
                                         class="block rounded-lg px-4 py-2 text-sm font-medium text-gray-300 hover:bg-white/10">Activas</a>
-                                    <a href="#"
+                                    <a href="{% url 'list_deactive_dishes' %}"
                                         class="block rounded-lg px-4 py-2 text-sm font-medium text-gray-300 hover:bg-white/10">Desactivadas</a>
-                                    <a href="#"
+                                    <a href="{% url 'create_dish' %}"
                                         class="block rounded-lg px-4 py-2 text-sm font-medium text-gray-300 hover:bg-white/10">Crear
                                         Receta</a>
-                                    <a href="#"
+                                    <a href="{% url 'edit_intakes' %}"
                                         class="block rounded-lg px-4 py-2 text-sm font-medium text-gray-300 hover:bg-white/10">Editar
                                         Ingestas</a>
                                 </div>
@@ -167,11 +167,11 @@
                                     </svg>
                                 </summary>
                                 <div class="ml-4 mt-2 space-y-1 border-l border-secondary/60 pl-3">
-                                    <a href="#"
+                                    <a href="{% url 'list_active_foods' %}"
                                         class="block rounded-lg px-4 py-2 text-sm font-medium text-gray-300 hover:bg-white/10">Activos</a>
-                                    <a href="#"
+                                    <a href="{% url 'list_deactive_foods' %}"
                                         class="block rounded-lg px-4 py-2 text-sm font-medium text-gray-300 hover:bg-white/10">Desactivados</a>
-                                    <a href="#"
+                                    <a href="{% url 'create_food' %}"
                                         class="block rounded-lg px-4 py-2 text-sm font-medium text-gray-300 hover:bg-white/10">Crear
                                         Alimentos</a>
                                 </div>
@@ -332,7 +332,7 @@
                             </svg>
                         </div>
                         <p class="text-base font-semibold text-white">
-                            {{ current_user.username }}
+                            {{ user.username }}
                         </p>
                     </div>
                     <div class="mt-5">
@@ -441,7 +441,7 @@
                                 <div class="mt-6 flex h-full flex-1 flex-col">
                                     <div class="divide-y divide-secondary/80">
                                         <div class="space-y-3 py-6 text-secondary">
-                                            <a href="admin/home.html"
+                                            <a href="{% url 'admin-home' %}"
                                                 class="-mx-3 flex items-center gap-3 rounded-xl px-4 py-2.5 text-base/7 font-semibold text-gray-200 hover:bg-white/10">
                                                 <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none"
                                                     xmlns="http://www.w3.org/2000/svg">
@@ -487,11 +487,11 @@
                                                     </svg>
                                                 </summary>
                                                 <div class="ml-4 mt-2 space-y-1 border-l border-secondary/60 pl-3">
-                                                    <a href="#"
+                                                    <a href="{% url 'list_active_clients' %}"
                                                         class="block rounded-lg px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/10">Activos</a>
-                                                    <a href="#"
+                                                    <a href="{% url 'list_deactive_clients' %}"
                                                         class="block rounded-lg px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/10">Desactivados</a>
-                                                    <a href="admin/create_client.html"
+                                                    <a href="{% url 'create_client' %}"
                                                         class="block rounded-lg px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/10">Crear
                                                         Cliente</a>
                                                 </div>
@@ -545,14 +545,14 @@
                                                     </svg>
                                                 </summary>
                                                 <div class="ml-4 mt-2 space-y-1 border-l border-secondary/60 pl-3">
-                                                    <a href="#"
+                                                    <a href="{% url 'list_active_dishes' %}"
                                                         class="block rounded-lg px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/10">Activas</a>
-                                                    <a href="#"
+                                                    <a href="{% url 'list_deactive_dishes' %}"
                                                         class="block rounded-lg px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/10">Desactivadas</a>
-                                                    <a href="#"
+                                                    <a href="{% url 'create_dish' %}"
                                                         class="block rounded-lg px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/10">Crear
                                                         Receta</a>
-                                                    <a href="#"
+                                                    <a href="{% url 'edit_intakes' %}"
                                                         class="block rounded-lg px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/10">Editar
                                                         Ingestas</a>
                                                 </div>
@@ -588,11 +588,11 @@
                                                     </svg>
                                                 </summary>
                                                 <div class="ml-4 mt-2 space-y-1 border-l border-secondary/60 pl-3">
-                                                    <a href="#"
+                                                    <a href="{% url 'list_active_foods' %}"
                                                         class="block rounded-lg px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/10">Activos</a>
-                                                    <a href="#"
+                                                    <a href="{% url 'list_deactive_foods' %}"
                                                         class="block rounded-lg px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/10">Desactivados</a>
-                                                    <a href="#"
+                                                    <a href="{% url 'create_food' %}"
                                                         class="block rounded-lg px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/10">Crear
                                                         Alimentos</a>
                                                 </div>
@@ -755,7 +755,7 @@
                                         </a>
                                     </div>
                                     <div class="mt-auto pt-4">
-                                        <a href="#"
+                                        <a href="{% url 'logout' %}"
                                             class="flex items-center justify-center gap-2 rounded-xl border border-red-400/30 px-4 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-red-300 hover:bg-white/5">
                                             <svg class="h-4 w-4" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"
                                                 stroke-width="3" stroke="#f59e9e" fill="none">
@@ -827,14 +827,7 @@
         </div>
     </div>
 </body>
-<script>
-  document.addEventListener("DOMContentLoaded", () => {
-    document.querySelectorAll("[data-alert]").forEach((alert) => {
-      setTimeout(() => {
-        alert.classList.add("opacity-0", "translate-x-8");
-        setTimeout(() => alert.remove(), 300);
-      }, 4000);
-    });
-  });
-</script>
+<script src="{% static 'js/main.js' %}"></script>
+<script src="https://unpkg.com/htmx.org@2.0.4"></script>
+{% block extra_js %}  {% endblock %}
 </html>
