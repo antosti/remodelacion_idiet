@@ -1,0 +1,311 @@
+{% extends 'admin/layout.html' %}
+{% block title %} Crear cliente {% endblock %}
+{% load static %}
+
+{% block content %}
+<div class="rounded-2xl border border-gray-50 bg-gray-50 p-4 shadow-sm sm:p-6 m-3">
+    <h2 class="mb-6 text-base font-semibold text-gray-700">
+        Filtro de citas
+    </h2>
+
+    <form class="grid grid-cols-1 gap-4 md:grid-cols-[auto_1fr_auto_1fr_auto] md:items-center">
+        <label class="font-semibold text-gray-800">
+        Citas del día ..
+        </label>
+
+        <input
+        type="text"
+        placeholder="18/05/2026"
+        class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-600 shadow-sm outline-none transition focus:border-idiet focus:ring-2 focus:ring-purple-200"
+        />
+
+        <span class="hidden font-semibold text-gray-700 md:block">
+        a
+        </span>
+
+        <input
+        type="text"
+        placeholder="18/06/2026"
+        class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-600 shadow-sm outline-none transition focus:border-idiet focus:ring-2 focus:ring-purple-200"
+        />
+
+        <button
+        type="submit"
+        class="w-full rounded-xl bg-idiet px-8 py-3 font-semibold text-white shadow-md transition hover:bg-purple-800 hover:shadow-lg md:w-auto"
+        >
+        Buscar
+        </button>
+    </form>
+</div>
+<div class="flex flex-col lg:flex-row gap-4">
+    <div class="w-full lg:w-1/2 min-w-0 p-6 bg-gray-50 rounded-2xl">
+        <div class="px-2 mb-6">
+            <h1 class="text-2xl font-bold text-gray-700 text-center">Lista de citas</h1>
+            <button
+                id="openNewAppointmentModal"
+                class="mt-4 w-full rounded-xl bg-idiet px-8 py-3 font-semibold text-white shadow-md transition hover:bg-purple-800 hover:shadow-lg md:w-auto">
+                Nueva cita
+            </button>
+        </div>
+
+        <div id="newAppointmentModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 p-6">
+            <div class="w-full max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden rounded-3xl bg-white shadow-2xl">
+                <div class="flex items-center justify-between border-b border-gray-200 px-6 py-5">
+                    <h2 class="text-xl font-semibold text-gray-900">Nueva cita</h2>
+                    <button type="button" class="modal-close rounded-full p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900" aria-label="Cerrar">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
+                <form method="POST" action="{% url 'create_appointment' %}" class="space-y-6 px-6 py-6">
+                    {% csrf_token %}
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div class="relative">
+                            <label class="mb-2 block text-sm font-semibold text-gray-700">Cliente</label>
+                            <input id="clientSearch" type="text" placeholder="Buscar cliente por nombre o email" autocomplete="off" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-700 shadow-sm outline-none focus:border-idiet focus:ring-2 focus:ring-purple-200" {% if not clients %}disabled{% endif %} required />
+                            <input id="clientId" name="client_id" type="hidden" />
+                            <div id="clientOptions" class="hidden absolute left-0 right-0 z-20 mt-1 max-h-64 overflow-y-auto rounded-2xl border border-gray-300 bg-white shadow-lg">
+                                {% if clients %}
+                                    {% for client in clients %}
+                                    <button type="button" data-id="{{ client.id }}" class="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100 focus:bg-gray-100">
+                                        {{ client.first_name }} {{ client.last_name }} · {{ client.email }}
+                                    </button>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="px-4 py-3 text-sm text-gray-500">No hay clientes disponibles</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div>
+                            <label class="mb-2 block text-sm font-semibold text-gray-700">Motivo</label>
+                            <input name="motive" type="text" placeholder="Consulta inicial" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-700 shadow-sm outline-none focus:border-idiet focus:ring-2 focus:ring-purple-200" />
+                        </div>
+                        <div>
+                            <label class="mb-2 block text-sm font-semibold text-gray-700">Fecha y hora inicio</label>
+                            <input name="start_date" type="datetime-local" required class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-700 shadow-sm outline-none focus:border-idiet focus:ring-2 focus:ring-purple-200" />
+                        </div>
+                        <div>
+                            <label class="mb-2 block text-sm font-semibold text-gray-700">Duración (minutos)</label>
+                            <input name="duration_minutes" type="number" min="1" required placeholder="60" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-700 shadow-sm outline-none focus:border-idiet focus:ring-2 focus:ring-purple-200" />
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                        <button type="button" class="modal-close w-full rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 sm:w-auto">Cancelar</button>
+                        <button type="submit" class="w-full rounded-xl bg-idiet px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-purple-800 sm:w-auto">Guardar cita</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+            <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-5">
+                <div class="flex items-center gap-2 text-gray-700">
+                    <span class="text-sm font-semibold">Mostrando</span>
+                    <select class="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                        <option selected>10</option>
+                        <option>25</option>
+                        <option>50</option>
+                        <option>100</option>
+                    </select>
+                    <span class="text-sm font-semibold">Resultados</span>
+                </div>
+
+                <div class="flex items-center gap-2 md:ml-6">
+                    <label class="text-sm font-semibold text-gray-700">Búsqueda rápida:</label>
+                    <input type="text"
+                        class="border rounded-lg px-3 py-2 w-full md:w-56 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table id="appointmentsTable" class="w-full min-w-full">
+                    <thead>
+                        <tr class="border-b border-gray-200">
+                            <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
+                                <input type="checkbox"
+                                    class="rounded border-gray-300 text-secondary focus:ring-secondary/30">
+                            </th>
+                            <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
+                                <a href="{{ sort_url_prefix }}sort=name&direction={% if current_sort == 'name' and current_direction == 'asc' %}desc{% else %}asc{% endif %}"
+                                    class="flex items-center gap-4">
+                                    Nombre
+                                    <svg class="h-4 w-4" fill="#ababab" viewBox="0 0 16 16"
+                                        xmlns="http://www.w3.org/2000/svg" stroke="#ababab">
+                                        <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                        <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                                        <g id="SVGRepo_iconCarrier">
+                                            <path d="M2 4H0l3-4 3 4H4v12H2V4zm12 8h2l-3 4-3-4h2V0h2v12z"
+                                                fill-rule="evenodd">
+                                            </path>
+                                        </g>
+                                    </svg>
+                                </a>
+                            </th>
+                            <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
+                                <a href="{{ sort_url_prefix }}sort=surname&direction={% if current_sort == 'surname' and current_direction == 'asc' %}desc{% else %}asc{% endif %}"
+                                    class="flex items-center gap-4">
+                                    Apellidos
+                                    <svg class="h-4 w-4" fill="#ababab" viewBox="0 0 16 16"
+                                        xmlns="http://www.w3.org/2000/svg" stroke="#ababab">
+                                        <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                        <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                                        <g id="SVGRepo_iconCarrier">
+                                            <path d="M2 4H0l3-4 3 4H4v12H2V4zm12 8h2l-3 4-3-4h2V0h2v12z"
+                                                fill-rule="evenodd">
+                                            </path>
+                                        </g>
+                                    </svg>
+                                </a>
+                            </th>
+                            <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
+                                <a href="{{ sort_url_prefix }}sort=email&direction={% if current_sort == 'email' and current_direction == 'asc' %}desc{% else %}asc{% endif %}"
+                                    class="flex items-center gap-4">
+                                    Email
+                                    <svg class="h-4 w-4" fill="#ababab" viewBox="0 0 16 16"
+                                        xmlns="http://www.w3.org/2000/svg" stroke="#ababab">
+                                        <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                        <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                                        <g id="SVGRepo_iconCarrier">
+                                            <path d="M2 4H0l3-4 3 4H4v12H2V4zm12 8h2l-3 4-3-4h2V0h2v12z"
+                                                fill-rule="evenodd">
+                                            </path>
+                                        </g>
+                                    </svg>
+                                </a>
+                            </th>
+                            <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
+                                <a href="{{ sort_url_prefix }}sort=date&direction={% if current_sort == 'date' and current_direction == 'asc' %}desc{% else %}asc{% endif %}"
+                                    class="flex items-center gap-4">
+                                    Fecha
+                                    <svg class="h-4 w-4" fill="#ababab" viewBox="0 0 16 16"
+                                        xmlns="http://www.w3.org/2000/svg" stroke="#ababab">
+                                        <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                        <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                                        <g id="SVGRepo_iconCarrier">
+                                            <path d="M2 4H0l3-4 3 4H4v12H2V4zm12 8h2l-3 4-3-4h2V0h2v12z"
+                                                fill-rule="evenodd">
+                                            </path>
+                                        </g>
+                                    </svg>
+                                </a>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for appointment in appointments %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-4 border-b border-gray-100">
+                                <input type="checkbox"
+                                    class="rounded border-gray-300 text-secondary focus:ring-secondary/30">
+                            </td>
+                            <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
+                                {{ appointment.client.first_name }}
+                            </td>
+                            <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
+                                {{ appointment.client.last_name }}
+                            </td>
+                            <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
+                                {{ appointment.client.email }}
+                            </td>
+                            <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
+                                {{ appointment.start_date }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if appointments.paginator.count > 0 %}
+            <div
+                class="mt-5 flex flex-col gap-4 border-t border-gray-200 pt-4 md:flex-row md:items-center md:justify-between">
+                <p class="text-sm text-gray-600">
+                    Mostrando {{ appointments.start_index }} a {{ appointments.end_index }} de {{ appointments.paginator.count }}
+                    resultados
+                </p>
+
+                <div class="flex flex-wrap items-center md:justify-end">
+                    {% if appointments.has_previous %}
+                    <a href="{{ page_url_prefix }}page={{ appointments.previous_page_number }}"
+                        class="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-l-lg bg-white hover:bg-gray-50">
+                        Anterior
+                    </a>
+                    {% else %}
+                    <span class="px-4 py-2 text-sm text-gray-400 border border-gray-200 rounded-l-lg bg-gray-50">
+                        Anterior
+                    </span>
+                    {% endif %}
+
+                    {% if appointments.number > 3 %}
+                    <a href="{{ page_url_prefix }}page=1"
+                        class="px-4 py-2 text-sm text-gray-700 border-t border-b border-r border-gray-300 bg-white hover:bg-gray-50">
+                        1
+                    </a>
+
+                    {% if appointments.number > 4 %}
+                    <span class="px-4 py-2 text-sm text-gray-500 border-t border-b border-r border-gray-300 bg-white">
+                        ...
+                    </span>
+                    {% endif %}
+                    {% endif %}
+
+                    {% if appointments.has_previous %}
+                    <a href="{{ page_url_prefix }}page={{ appointments.previous_page_number }}"
+                        class="px-4 py-2 text-sm text-gray-700 border-t border-b border-r border-gray-300 bg-white hover:bg-gray-50">
+                        {{ appointments.previous_page_number }}
+                    </a>
+                    {% endif %}
+
+                    <span
+                        class="px-4 py-2 text-sm font-semibold text-white border-t border-b border-r border-gray-300 bg-idiet">
+                        {{ appointments.number }}
+                    </span>
+
+                    {% if appointments.has_next %}
+                    <a href="{{ page_url_prefix }}page={{ appointments.next_page_number }}"
+                        class="px-4 py-2 text-sm text-gray-700 border-t border-b border-r border-gray-300 bg-white hover:bg-gray-50">
+                        {{ appointments.next_page_number }}
+                    </a>
+                    {% endif %}
+
+                    {% if appointments.number < appointments.paginator.num_pages|add:"-2" %} {% if appointments.number < appointments.paginator.num_pages|add:"-3" %} <span
+                        class="px-4 py-2 text-sm text-gray-500 border-t border-b border-r border-gray-300 bg-white">
+                        ...
+                        </span>
+                        {% endif %}
+
+                        <a href="{{ page_url_prefix }}page={{ appointments.paginator.num_pages }}"
+                            class="px-4 py-2 text-sm text-gray-700 border-t border-b border-r border-gray-300 bg-white hover:bg-gray-50">
+                            {{ appointments.paginator.num_pages }}
+                        </a>
+                        {% endif %}
+
+                        {% if appointments.has_next %}
+                        <a href="{{ page_url_prefix }}page={{ appointments.next_page_number }}"
+                            class="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-r-lg bg-white hover:bg-gray-50">
+                            Siguiente
+                        </a>
+                        {% else %}
+                        <span class="px-4 py-2 text-sm text-gray-400 border border-gray-200 rounded-r-lg bg-gray-50">
+                            Siguiente
+                        </span>
+                        {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="w-full lg:w-1/2 min-w-0 bg-gray-50 rounded-2xl p-6" id="calendar"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+<script>
+    window.appointmentEvents = {{ appointment_events|safe }};
+</script>
+<script src="{% static 'js/appointments.js' %}"></script>
+
+
+{% endblock %}
+
+

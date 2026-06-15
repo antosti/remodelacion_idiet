@@ -54,7 +54,45 @@ def admin_home(request):
         'new_client': new_client,
     })
 
-def paginate_queryset(request, queryset, per_page=100):
+
+def create_client(request):
+    food_groups = FoodGroup.objects.all()
+
+    if request.method == 'POST':
+        # First create the Django user linked to the client
+        user = User.objects.create_user(
+            email=request.POST.get('email'),
+            first_name=request.POST.get('first_name'),
+            last_name=request.POST.get('last_name'),
+            username=request.POST.get('username'),
+        )
+
+        # Then create the client profile using the submitted form data
+        Client.objects.create(
+            user=user,
+            email=request.POST.get('email'),
+            first_name=request.POST.get('first_name'),
+            last_name=request.POST.get('last_name'),
+            birth_date=request.POST.get('birth_date'),
+            gender=request.POST.get('gender'),
+            height=request.POST.get('height'),
+            weight=request.POST.get('weight'),
+            dni=request.POST.get('dni'),
+            phone_number=request.POST.get('phone_number') or '',
+            phone_number_2=request.POST.get('phone_number_2') or '',
+            address=request.POST.get('address') or '',
+            postal_code=request.POST.get('postal_code') or '',
+            city=request.POST.get('city') or '',
+            activity_level=request.POST.get('activity_level'),
+        )
+
+        return redirect('create_client')
+
+    return render(request, 'admin/create_client.html', {
+        'food_groups': food_groups,
+    })
+
+def paginate_queryset(request, queryset, per_page=10):
     page_params = request.GET.copy()
     page_params.pop('page', None)
 
