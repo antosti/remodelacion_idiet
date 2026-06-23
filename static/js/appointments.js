@@ -284,7 +284,6 @@ eventContent: function(arg) {
 
 eventClick: function(info) {
     // abrir edit modal y rellenar datos
-    console.log(info.event)
     if (editAppointmentModal && editAppointmentForm) {
         const appointmentId = info.event.extendedProps?.appointment_id || info.event.id || ''
         if (editAppointmentIdInput) editAppointmentIdInput.value = appointmentId
