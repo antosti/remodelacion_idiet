@@ -30,6 +30,31 @@
             </div>
         </div>
 
+        <div id="bulkActionBar" class="hidden mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <span id="selectedCount" class="text-sm font-semibold text-blue-900">0 citas seleccionadas</span>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" id="cancelBulkActionBtn" class="px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 transition">
+                        Cancelar selección
+                    </button>
+                    <form id="deleteBulkForm" method="POST" action="{% url 'delete_appointments_bulk' %}" class="inline" onsubmit="return confirm('¿Eliminar estas citas definitivamente?')">
+                        {% csrf_token %}
+                        <div id="deleteBulkInputs"></div>
+                        <button type="submit" class="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition">
+                            Eliminar seleccionadas
+                        </button>
+                    </form>
+                    <form id="reactivateBulkForm" method="POST" action="{% url 'reactivate_appointments_bulk' %}" class="inline" onsubmit="return confirm('¿Reactivar estas citas?')">
+                        {% csrf_token %}
+                        <div id="reactivateBulkInputs"></div>
+                        <button type="submit" class="px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition">
+                            Reactivar seleccionadas
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <div class="overflow-x-auto">
             <table id="appointmentsTable" class="w-full min-w-full">
                 <thead>
@@ -102,14 +127,17 @@
                                 </svg>
                             </a>
                         </th>
+                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
+                            Acciones
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for appointment in appointments %}
                     <tr class="hover:bg-gray-50">
                         <td class="px-4 py-4 border-b border-gray-100">
-                            <input type="checkbox"
-                                class="rounded border-gray-300 text-secondary focus:ring-secondary/30">
+                            <input type="checkbox" value="{{ appointment.id }}"
+                                class="appointment-checkbox rounded border-gray-300 text-secondary focus:ring-secondary/30">
                         </td>
                         <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
                             {{ appointment.client.first_name }}
@@ -122,6 +150,22 @@
                         </td>
                         <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
                             {{ appointment.start_date }}
+                        </td>
+                        <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
+                            <div class="flex flex-wrap gap-2">
+                                <form method="post" action="{% url 'delete_appointment' appointment.id %}" class="inline" onsubmit="return confirm('¿Eliminar esta cita definitivamente?')">
+                                    {% csrf_token %}
+                                    <button type="submit" class="px-3 py-1 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition">
+                                        Eliminar
+                                    </button>
+                                </form>
+                                <form method="post" action="{% url 'reactivate_appointment' appointment.id %}" class="inline" onsubmit="return confirm('¿Reactivar esta cita?')">
+                                    {% csrf_token %}
+                                    <button type="submit" class="px-3 py-1 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition">
+                                        Reactivar
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
@@ -210,19 +254,66 @@
     </div>
 </div>
 <script>
-    let appointmentsTable = document.getElementById('appointmentsTable')
-    let toggleAllCheckbox = appointmentsTable.querySelector("thead input[type='checkbox']")
-    let checkboxes = appointmentsTable.querySelectorAll("tbody input[type='checkbox']")
-    toggleAllCheckbox.addEventListener('change', (event) => {
-        checkboxes.forEach((checkbox) => {
-          checkbox.checked = event.target.checked
+    const appointmentsTable = document.getElementById('appointmentsTable')
+    const toggleAllCheckbox = appointmentsTable.querySelector("thead input[type='checkbox']")
+    const appointmentCheckboxes = appointmentsTable.querySelectorAll("tbody input[type='checkbox']")
+    const bulkActionBar = document.getElementById('bulkActionBar')
+    const selectedCount = document.getElementById('selectedCount')
+    const cancelBulkActionBtn = document.getElementById('cancelBulkActionBtn')
+    const deleteBulkInputs = document.getElementById('deleteBulkInputs')
+    const reactivateBulkInputs = document.getElementById('reactivateBulkInputs')
+
+    const updateBulkSelection = () => {
+        const selectedIds = Array.from(appointmentCheckboxes)
+            .filter((checkbox) => checkbox.checked)
+            .map((checkbox) => checkbox.value)
+
+        if (selectedIds.length > 0) {
+            bulkActionBar.classList.remove('hidden')
+            selectedCount.textContent = `${selectedIds.length} cita(s) seleccionada(s)`
+        } else {
+            bulkActionBar.classList.add('hidden')
+            selectedCount.textContent = '0 citas seleccionadas'
+        }
+
+        deleteBulkInputs.innerHTML = ''
+        reactivateBulkInputs.innerHTML = ''
+
+        selectedIds.forEach((id) => {
+            const deleteInput = document.createElement('input')
+            deleteInput.type = 'hidden'
+            deleteInput.name = 'appointment_ids'
+            deleteInput.value = id
+            deleteBulkInputs.appendChild(deleteInput)
+
+            const reactivateInput = document.createElement('input')
+            reactivateInput.type = 'hidden'
+            reactivateInput.name = 'appointment_ids'
+            reactivateInput.value = id
+            reactivateBulkInputs.appendChild(reactivateInput)
         })
-      })
+    }
 
-    let listNumber = document.getElementById('listNumber')
-    let select = document.querySelector("select")
-    
+    if (toggleAllCheckbox) {
+        toggleAllCheckbox.addEventListener('change', (event) => {
+            appointmentCheckboxes.forEach((checkbox) => {
+                checkbox.checked = event.target.checked
+            })
+            updateBulkSelection()
+        })
+    }
 
+    appointmentCheckboxes.forEach((checkbox) => {
+        checkbox.addEventListener('change', updateBulkSelection)
+    })
+
+    cancelBulkActionBtn.addEventListener('click', () => {
+        toggleAllCheckbox.checked = false
+        appointmentCheckboxes.forEach((checkbox) => {
+            checkbox.checked = false
+        })
+        updateBulkSelection()
+    })
 </script>
 
 {% endblock %}

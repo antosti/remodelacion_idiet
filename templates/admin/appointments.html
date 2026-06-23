@@ -62,7 +62,7 @@
                     {% csrf_token %}
                     <div class="grid gap-4 md:grid-cols-2">
                         <div class="relative">
-                            <label class="mb-2 block text-sm font-semibold text-gray-700">Cliente</label>
+                            <label for="clientSearch" class="mb-2 block text-sm font-semibold text-gray-700">Cliente</label>
                             <input id="clientSearch" type="text" placeholder="Buscar cliente por nombre o email" autocomplete="off" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-700 shadow-sm outline-none focus:border-idiet focus:ring-2 focus:ring-purple-200" {% if not clients %}disabled{% endif %} required />
                             <input id="clientId" name="client_id" type="hidden" />
                             <div id="clientOptions" class="hidden absolute left-0 right-0 z-20 mt-1 max-h-64 overflow-y-auto rounded-2xl border border-gray-300 bg-white shadow-lg">
@@ -98,6 +98,58 @@
             </div>
         </div>
 
+        <!-- Edit appointment modal -->
+        <div id="editAppointmentModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 p-6">
+            <div class="w-full max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden rounded-3xl bg-white shadow-2xl">
+                <div class="flex items-center justify-between border-b border-gray-200 px-6 py-5">
+                    <h2 class="text-xl font-semibold text-gray-900">Editar cita</h2>
+                    <button type="button" class="modal-close rounded-full p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900" aria-label="Cerrar">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                </div>
+                <form id="editAppointmentForm" method="POST" action="" class="space-y-6 px-6 py-6">
+                    {% csrf_token %}
+                    <input id="editAppointmentId" name="appointment_id" type="hidden" />
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <div class="relative">
+                            <label for="editClientSearch" class="mb-2 block text-sm font-semibold text-gray-700">Cliente</label>
+                            <input id="editClientSearch" type="text" placeholder="Buscar cliente por nombre o email" autocomplete="off" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-700 shadow-sm outline-none focus:border-idiet focus:ring-2 focus:ring-purple-200" {% if not clients %}disabled{% endif %} required />
+                            <input id="editClientId" name="client_id" type="hidden" />
+                            <div id="editClientOptions" class="hidden absolute left-0 right-0 z-20 mt-1 max-h-64 overflow-y-auto rounded-2xl border border-gray-300 bg-white shadow-lg">
+                                {% if clients %}
+                                    {% for client in clients %}
+                                    <button type="button" data-id="{{ client.id }}" class="w-full px-4 py-3 text-left text-sm text-gray-700 hover:bg-gray-100 focus:bg-gray-100">
+                                        {{ client.first_name }} {{ client.last_name }} · {{ client.email }}
+                                    </button>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="px-4 py-3 text-sm text-gray-500">No hay clientes disponibles</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div>
+                            <label class="mb-2 block text-sm font-semibold text-gray-700">Motivo</label>
+                            <input name="motive" id="editMotive" type="text" placeholder="Consulta inicial" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-700 shadow-sm outline-none focus:border-idiet focus:ring-2 focus:ring-purple-200" />
+                        </div>
+                        <div>
+                            <label class="mb-2 block text-sm font-semibold text-gray-700">Fecha y hora inicio</label>
+                            <input name="start_date" id="editStartDate" type="datetime-local" required class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-700 shadow-sm outline-none focus:border-idiet focus:ring-2 focus:ring-purple-200" />
+                        </div>
+                        <div>
+                            <label class="mb-2 block text-sm font-semibold text-gray-700">Duración (minutos)</label>
+                            <input name="duration_minutes" id="editDuration" type="number" min="1" required placeholder="60" class="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-700 shadow-sm outline-none focus:border-idiet focus:ring-2 focus:ring-purple-200" />
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                        <button type="button" class="modal-close w-full rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 sm:w-auto">Cancelar</button>
+                        <button type="submit" id="editAppointmentSubmitBtn" class="w-full rounded-xl bg-idiet px-5 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-purple-800 sm:w-auto">Actualizar cita</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
         <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
             <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-5">
                 <div class="flex items-center gap-2 text-gray-700">
@@ -115,6 +167,25 @@
                     <label class="text-sm font-semibold text-gray-700">Búsqueda rápida:</label>
                     <input type="text"
                         class="border rounded-lg px-3 py-2 w-full md:w-56 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                </div>
+            </div>
+
+            <!-- Bulk action bar -->
+            <div id="bulkActionBar" class="hidden mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div class="flex items-center justify-between">
+                    <span id="selectedCount" class="text-sm font-semibold text-blue-900">0 citas seleccionadas</span>
+                    <div class="flex gap-2">
+                    <button type="button" id="cancelBulkActionBtn" class="px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 transition">
+                        Cancelar
+                    </button>
+                    <form id="deactivateBulkForm" method="POST" action="{% url 'deactivate_appointments_bulk' %}" class="inline">
+                        {% csrf_token %}
+                        <div id="hiddenCheckboxes"></div>
+                        <button type="submit" class="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition">
+                            Desactivar seleccionadas
+                        </button>
+                    </form>
+                    </div>
                 </div>
             </div>
 
@@ -190,14 +261,16 @@
                                     </svg>
                                 </a>
                             </th>
+                            <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
+                                Acciones
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for appointment in appointments %}
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-4 py-4 border-b border-gray-100">
-                                <input type="checkbox"
-                                    class="rounded border-gray-300 text-secondary focus:ring-secondary/30">
+                        <tr class="hover:bg-gray-50" data-appointment-id="{{ appointment.id }}" data-client-id="{{ appointment.client.id }}" style="cursor: pointer;">
+                            <td class="px-4 py-4 border-b border-gray-100" onclick="event.stopPropagation()">
+                                <input type="checkbox" class="appointment-checkbox rounded border-gray-300 text-secondary focus:ring-secondary/30" data-appointment-id="{{ appointment.id }}">
                             </td>
                             <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
                                 {{ appointment.client.first_name }}
@@ -210,6 +283,11 @@
                             </td>
                             <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
                                 {{ appointment.start_date }}
+                            </td>
+                            <td class="px-4 py-4 text-gray-700 border-b border-gray-100 flex gap-2" onclick="event.stopPropagation()">
+                                <a href="{% url 'deactivate_appointment' appointment.id %}" class="px-3 py-1 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition" onclick="return confirm('¿Desactivar esta cita?')">
+                                    Cancelar
+                                </a>
                             </td>
                         </tr>
                         {% endfor %}

@@ -12,14 +12,7 @@ def create_client(request):
     food_groups = FoodGroup.objects.all()
 
     if request.method == 'POST':
-        # First create the Django user linked to the client
-        user = User.objects.create_user(
-            email=request.POST.get('email'),
-            first_name=request.POST.get('first_name'),
-            last_name=request.POST.get('last_name'),
-            username=request.POST.get('first_name'),
-        )
-
+        user = User.objects.get(id=request.user.id)
         # Then create the client profile using the submitted form data
         client = Client.objects.create(
             user=user,
@@ -39,7 +32,7 @@ def create_client(request):
             activity_level=request.POST.get('activity_level'),
         )
 
-        if(user is not None and client is not None):
+        if(client is not None):
             messages.success(request, "Cliente creado correctamente")
         else:
             messages.error(request, "Error al crear el cliente")
