@@ -202,15 +202,27 @@ try {
             const firstName = cells[1].textContent.trim()
             const lastName = cells[2].textContent.trim()
             const email = cells[3].textContent.trim()
-            const dateText = cells[4].textContent.trim()
+            const rowMotive = row.dataset.motive || ''
+            const rowStartDate = row.dataset.startDate || ''
+            const rowEndDate = row.dataset.endDate || ''
 
-            // parse dateText to datetime-local if possible
             let startDate = ''
-            const parsed = new Date(dateText)
-            if (!isNaN(parsed)) {
-                const dt = parsed
-                const pad = (n) => n.toString().padStart(2, '0')
-                startDate = dt.getFullYear() + '-' + pad(dt.getMonth() + 1) + '-' + pad(dt.getDate()) + 'T' + pad(dt.getHours()) + ':' + pad(dt.getMinutes())
+            if (rowStartDate) {
+                const parsed = new Date(rowStartDate)
+                if (!isNaN(parsed)) {
+                    const dt = parsed
+                    const pad = (n) => n.toString().padStart(2, '0')
+                    startDate = dt.getFullYear() + '-' + pad(dt.getMonth() + 1) + '-' + pad(dt.getDate()) + 'T' + pad(dt.getHours()) + ':' + pad(dt.getMinutes())
+                }
+            }
+
+            let duration = ''
+            if (rowStartDate && rowEndDate) {
+                const start = new Date(rowStartDate)
+                const end = new Date(rowEndDate)
+                if (!isNaN(start) && !isNaN(end) && end > start) {
+                    duration = Math.round((end - start) / (1000 * 60))
+                }
             }
 
             if (editAppointmentForm) {
@@ -218,9 +230,11 @@ try {
                 if (editClientSearchInput) editClientSearchInput.value = `${firstName} ${lastName}`
                 if (editClientIdInput) editClientIdInput.value = row.dataset.clientId || ''
                 const motiveInput = editAppointmentForm.querySelector('[name="motive"]')
-                if (motiveInput) motiveInput.value = ''
+                if (motiveInput) motiveInput.value = rowMotive
                 const startInput = editAppointmentForm.querySelector('[name="start_date"]')
                 if (startInput) startInput.value = startDate
+                const durationInput = editAppointmentForm.querySelector('[name="duration_minutes"]')
+                if (durationInput) durationInput.value = duration
                 if (editAppointmentForm && id) editAppointmentForm.action = `/appointments/${id}/update/`
                 editAppointmentModal.classList.remove('hidden')
                 editAppointmentModal.classList.add('flex')

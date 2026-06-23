@@ -268,7 +268,7 @@
                     </thead>
                     <tbody>
                         {% for appointment in appointments %}
-                        <tr class="hover:bg-gray-50" data-appointment-id="{{ appointment.id }}" data-client-id="{{ appointment.client.id }}" style="cursor: pointer;">
+                        <tr class="hover:bg-gray-50" data-appointment-id="{{ appointment.id }}" data-client-id="{{ appointment.client.id }}" data-motive="{{ appointment.motive|escape }}" data-start-date="{{ appointment.start_date|date:'c' }}" data-end-date="{{ appointment.end_date|date:'c' }}" style="cursor: pointer;">
                             <td class="px-4 py-4 border-b border-gray-100" onclick="event.stopPropagation()">
                                 <input type="checkbox" class="appointment-checkbox rounded border-gray-300 text-secondary focus:ring-secondary/30" data-appointment-id="{{ appointment.id }}">
                             </td>
