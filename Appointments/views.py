@@ -39,7 +39,30 @@ def appointments_view(request):
     sort_params.pop('sort', None)
     sort_params.pop('direction', None)
 
+    from_date_str = request.GET.get('from_date', '').strip()
+    to_date_str = request.GET.get('to_date', '').strip()
+    from_date = None
+    to_date = None
+
+    if from_date_str:
+        try:
+            from_date = datetime.fromisoformat(from_date_str).date()
+        except ValueError:
+            from_date = None
+
+    if to_date_str:
+        try:
+            to_date = datetime.fromisoformat(to_date_str).date()
+        except ValueError:
+            to_date = None
+
     appointments = Appointment.objects.filter(status='Pendiente', user_id=request.user.id)
+
+    if from_date:
+        appointments = appointments.filter(start_date__date__gte=from_date)
+    if to_date:
+        appointments = appointments.filter(start_date__date__lte=to_date)
+
     appointments = appointments.order_by(order_field)
     pagination = paginate_queryset(request, appointments, per_page)
     clients = Client.objects.filter(user_id=request.user.id)
@@ -64,6 +87,8 @@ def appointments_view(request):
         'current_direction': current_direction,
         'page_url_prefix': pagination['page_url_prefix'],
         'sort_url_prefix': f'?{sort_params.urlencode()}&' if sort_params else '?',
+        'from_date': from_date_str,
+        'to_date': to_date_str,
         "per_page": per_page,
     })
 
