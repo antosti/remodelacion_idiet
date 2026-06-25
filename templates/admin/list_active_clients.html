@@ -2,6 +2,10 @@
 {% block title %} Lista de clientes activos {% endblock %}
 {% load static %}
 
+{% block extra_js %}
+<script src="{% static 'js/clients.js' %}"></script>
+{% endblock %}
+
 {% block content %}
 <div class="w-full p-4 sm:p-6 bg-gray-50 rounded-2xl">
     <div class="flex flex-col gap-3 px-2 mb-6 sm:flex-row sm:items-center sm:justify-between">
@@ -102,11 +106,31 @@
         </div>
 
         <div class="overflow-x-auto">
+            <div id="bulkActionBar" class="hidden mb-4 rounded-2xl border border-secondary/20 bg-secondary/10 p-4 text-secondary">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm font-semibold"><span id="selectedCount">0</span> cliente(s) seleccionados</p>
+                        <p class="text-sm text-gray-600">Puedes desactivar la selección o aplicar la acción masiva.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" id="cancelBulkSelectionBtn"
+                            class="px-4 py-2 rounded-lg bg-white text-sm font-semibold text-gray-700 border border-gray-300 hover:bg-gray-50">Cancelar</button>
+                        <button type="submit" form="bulkDeactivateForm"
+                            class="px-4 py-2 rounded-lg bg-idiet text-white text-sm font-semibold hover:bg-idiet/90">Desactivar seleccionados</button>
+                    </div>
+                </div>
+            </div>
+
+            <form id="bulkDeactivateForm" method="POST" action="{% url 'deactivate_clients_bulk' %}">
+                {% csrf_token %}
+                <div id="bulkClientInputs"></div>
+            </form>
+
             <table class="w-full min-w-[760px]">
                 <thead>
                     <tr class="border-b border-gray-200">
                         <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200 w-12">
-                            <input type="checkbox"
+                            <input id="selectAllClients" type="checkbox"
                                 class="rounded border-gray-300 text-secondary focus:ring-secondary/30">
                         </th>
 
@@ -167,11 +191,14 @@
                                     <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
                                     <g id="SVGRepo_iconCarrier">
                                         <path d="M2 4H0l3-4 3 4H4v12H2V4zm12 8h2l-3 4-3-4h2V0h2v12z"
-                                            fill-rule="evenodd">
-                                        </path>
+                                            fill-rule="evenodd"></path>
                                     </g>
                                 </svg>
                             </a>
+                        </th>
+
+                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
+                            Acciones
                         </th>
                     </tr>
                 </thead>
@@ -180,8 +207,7 @@
                     {% for client in clients %}
                     <tr class="hover:bg-gray-50">
                         <td class="px-4 py-4 border-b border-gray-100">
-                            <input type="checkbox"
-                                class="rounded border-gray-300 text-secondary focus:ring-secondary/30">
+                            <input type="checkbox" class="client-checkbox rounded border-gray-300 text-secondary focus:ring-secondary/30" data-client-id="{{ client.id }}">
                         </td>
                         <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
                             {{ client.dni }}
@@ -195,10 +221,19 @@
                         <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
                             {{ client.email }}
                         </td>
+                        <td class="px-4 py-4 border-b border-gray-100">
+                            <form method="POST" action="{% url 'deactivate_client' client.id %}" onsubmit="return confirm('¿Desactivar este cliente?')">
+                                {% csrf_token %}
+                                <button type="submit"
+                                    class="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700 transition">
+                                    Desactivar
+                                </button>
+                            </form>
+                        </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="px-4 py-8 text-center text-sm font-semibold text-gray-400">
+                        <td colspan="6" class="px-4 py-8 text-center text-sm font-semibold text-gray-400">
                             Sin registros
                         </td>
                     </tr>

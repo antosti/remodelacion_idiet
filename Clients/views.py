@@ -1,6 +1,6 @@
 from django.contrib import messages
 
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from Users.models import User
 from Clients.models import Client
 from FoodGroup.models import FoodGroup
@@ -95,6 +95,32 @@ def get_clients_list_context(request, clients):
         'page_url_prefix': pagination['page_url_prefix'],
         'sort_url_prefix': f'?{sort_params.urlencode()}&' if sort_params else '?',
     }
+
+@login_required
+def deactivate_client(request, id):
+    if request.method == 'POST':
+        client = get_object_or_404(Client, id=id, user__is_active=True)
+        client.user.is_active = False
+        client.user.save()
+        messages.success(request, 'Cliente desactivado correctamente')
+    return redirect('list_active_clients')
+
+@login_required
+def deactivate_clients_bulk(request):
+    if request.method == 'POST':
+        client_ids = request.POST.getlist('selected_clients')
+        clients = Client.objects.filter(id__in=client_ids, user__is_active=True).select_related('user')
+        count = 0
+        for client in clients:
+            client.user.is_active = False
+            client.user.save()
+            count += 1
+
+        if count:
+            messages.success(request, f'{count} cliente(s) desactivado(s) correctamente')
+        else:
+            messages.warning(request, 'No se seleccionaron clientes válidos para desactivar')
+    return redirect('list_active_clients')
 
 @login_required
 def list_active_clients(request):
