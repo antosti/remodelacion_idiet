@@ -99,9 +99,9 @@ def get_clients_list_context(request, clients):
 @login_required
 def deactivate_client(request, id):
     if request.method == 'POST':
-        client = get_object_or_404(Client, id=id, user__is_active=True)
-        client.user.is_active = False
-        client.user.save()
+        client = get_object_or_404(Client, id=id, status=True)
+        client.status = False
+        client.save()
         messages.success(request, 'Cliente desactivado correctamente')
     return redirect('list_active_clients')
 
@@ -109,11 +109,11 @@ def deactivate_client(request, id):
 def deactivate_clients_bulk(request):
     if request.method == 'POST':
         client_ids = request.POST.getlist('selected_clients')
-        clients = Client.objects.filter(id__in=client_ids, user__is_active=True).select_related('user')
+        clients = Client.objects.filter(id__in=client_ids, status=True)
         count = 0
         for client in clients:
-            client.user.is_active = False
-            client.user.save()
+            client.status = False
+            client.save()
             count += 1
 
         if count:

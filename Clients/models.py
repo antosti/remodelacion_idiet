@@ -31,6 +31,7 @@ class Client(models.Model):
     postal_code = models.CharField(max_length=10)
     city = models.CharField(max_length=50)
     activity_level = models.CharField(max_length=20, choices=ACTIVITY_LEVELS_CHOICES)
+    status = models.BooleanField(default=True)
     
     class Meta:
         db_table = 'client'
