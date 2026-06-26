@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const clientCheckboxes = Array.from(document.querySelectorAll('.client-checkbox'));
   const bulkActionBar = document.getElementById('bulkActionBar');
   const selectedCount = document.getElementById('selectedCount');
-  const bulkClientInputs = document.getElementById('bulkClientInputs');
+  const bulkClientInputs = document.getElementById('bulkClientInputs') || document.getElementById('bulkReactivateInputs');
   const cancelBulkSelectionBtn = document.getElementById('cancelBulkSelectionBtn');
 
   const updateBulkSelection = () => {

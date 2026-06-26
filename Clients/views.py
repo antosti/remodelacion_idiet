@@ -106,6 +106,15 @@ def deactivate_client(request, id):
     return redirect('list_active_clients')
 
 @login_required
+def reactivate_client(request, id):
+    if request.method == 'POST':
+        client = get_object_or_404(Client, id=id, status=False)
+        client.status = True
+        client.save()
+        messages.success(request, 'Cliente reactivado correctamente')
+    return redirect('list_deactive_clients')
+
+@login_required
 def deactivate_clients_bulk(request):
     if request.method == 'POST':
         client_ids = request.POST.getlist('selected_clients')
@@ -123,14 +132,31 @@ def deactivate_clients_bulk(request):
     return redirect('list_active_clients')
 
 @login_required
+def reactivate_clients_bulk(request):
+    if request.method == 'POST':
+        client_ids = request.POST.getlist('selected_clients')
+        clients = Client.objects.filter(id__in=client_ids, status=False)
+        count = 0
+        for client in clients:
+            client.status = True
+            client.save()
+            count += 1
+
+        if count:
+            messages.success(request, f'{count} cliente(s) reactivado(s) correctamente')
+        else:
+            messages.warning(request, 'No se seleccionaron clientes válidos para reactivar')
+    return redirect('list_deactive_clients')
+
+@login_required
 def list_active_clients(request):
-    clients = Client.objects.select_related('user').filter(user__is_active=True)
+    clients = Client.objects.filter(status=True)
     context = get_clients_list_context(request, clients)
     return render(request, 'admin/list_active_clients.html', context)
 
 
 @login_required
 def list_deactive_clients(request):
-    clients = Client.objects.select_related('user').filter(user__is_active=False)
+    clients = Client.objects.filter(status=False)
     context = get_clients_list_context(request, clients)
     return render(request, 'admin/list_deactive_clients.html', context)
