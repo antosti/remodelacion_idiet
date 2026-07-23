@@ -29,3 +29,11 @@ class DishProduct(models.Model):
     
     class Meta:
         db_table = 'dish_product'
+
+
+class DishIntake(models.Model):
+    dish = models.ForeignKey(Dish, on_delete=models.CASCADE)
+    intake = models.ForeignKey(Intake, on_delete=models.CASCADE)
+    
+    class Meta:
+        db_table = 'dish_intake'

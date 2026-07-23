@@ -2,6 +2,7 @@ from django.db import models
 from Micronutrients.models import Micronutrient
 from FoodGroup.models import FoodGroup
 from SuperGroup.models import SuperGroup
+from Users.models import User
 
 # Create your models here.
 class Product(models.Model):
@@ -39,3 +40,22 @@ class ProductMicronutrient(models.Model):
     class Meta:
         db_table = 'product_micronutrient'
         unique_together = ('product', 'micronutrient')
+
+
+class ProductExcluded(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    date_added = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'product_excluded'
+        unique_together = ('user', 'product')
+
+class ProductInactive(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    date_added = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'product_inactive'
+        unique_together = ('user', 'product')
