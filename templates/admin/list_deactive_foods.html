@@ -1,11 +1,15 @@
 {% extends 'admin/layout.html' %}
-{% block title %} Lista de alimentos activos {% endblock %}
+{% block title %} Lista de alimentos desactivados {% endblock %}
 {% load static %}
+
+{% block extra_js %}
+<script src="{% static 'js/foods.js' %}"></script>
+{% endblock %}
 
 {% block content %}
 <div class="w-full p-6 bg-gray-50 rounded-2xl">
     <div class="px-2 mb-6">
-        <h1 class="text-2xl font-bold text-gray-700 text-center">Lista de Alimentos Activos</h1>
+        <h1 class="text-2xl font-bold text-gray-700 text-center">Lista de Alimentos Desactivados</h1>
     </div>
 
     <form method="GET" class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm mb-6">
@@ -68,11 +72,46 @@
         </div>
 
         <div class="overflow-x-auto">
+            <div id="bulkActionBar"
+                class="hidden mb-4 rounded-2xl border border-secondary/20 bg-secondary/10 p-4 text-secondary">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm font-semibold"><span id="selectedCount">0</span> alimento(s) seleccionados</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" id="cancelBulkSelectionBtn"
+                            class="px-4 py-2 rounded-lg bg-white text-sm font-semibold text-gray-700 border border-gray-300 hover:bg-gray-50">
+                            Cancelar
+                        </button>
+                        <button type="submit" form="bulkReactivateForm"
+                            onclick="return confirm('¿Reactivar los alimentos seleccionados?')"
+                            class="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700">
+                            Reactivar seleccionados
+                        </button>
+                        <button type="submit" form="bulkDeleteForm"
+                            onclick="return confirm('¿Eliminar definitivamente los alimentos seleccionados? Esta acción no se puede deshacer.')"
+                            class="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700">
+                            Eliminar seleccionados
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <form id="bulkReactivateForm" method="POST" action="{% url 'reactivate_foods_bulk' %}">
+                {% csrf_token %}
+                <div id="bulkFoodInputs"></div>
+            </form>
+
+            <form id="bulkDeleteForm" method="POST" action="{% url 'delete_foods_bulk' %}">
+                {% csrf_token %}
+                <div id="bulkDeleteFoodInputs"></div>
+            </form>
+
             <table class="w-full min-w-full">
                 <thead>
                     <tr class="border-b border-gray-200">
                         <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
-                            <input type="checkbox"
+                            <input id="selectAllFoods" type="checkbox"
                                 class="rounded border-gray-300 text-secondary focus:ring-secondary/30">
                         </th>
                         <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
@@ -187,6 +226,9 @@
                                 </svg>
                             </a>
                         </th>
+                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
+                            Acciones
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -194,7 +236,8 @@
                     <tr class="hover:bg-gray-50">
                         <td class="px-4 py-4 border-b border-gray-100">
                             <input type="checkbox"
-                                class="rounded border-gray-300 text-secondary focus:ring-secondary/30">
+                                class="food-checkbox rounded border-gray-300 text-secondary focus:ring-secondary/30"
+                                data-food-id="{{ product.id }}">
                         </td>
                         <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
                             {{ product.food_name_spanish }}
@@ -216,6 +259,32 @@
                         </td>
                         <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
                             {{ product.origin_db }}
+                        </td>
+                        <td class="px-4 py-4 border-b border-gray-100">
+                            <div class="flex flex-wrap gap-2">
+                                <form method="POST" action="{% url 'reactivate_food' product.id %}"
+                                    onsubmit="return confirm('¿Reactivar este alimento?')">
+                                    {% csrf_token %}
+                                    <button type="submit"
+                                        class="rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700 transition">
+                                        Reactivar
+                                    </button>
+                                </form>
+                                <form method="POST" action="{% url 'delete_food' product.id %}"
+                                    onsubmit="return confirm('¿Eliminar definitivamente este alimento? Esta acción no se puede deshacer.')">
+                                    {% csrf_token %}
+                                    <button type="submit"
+                                        class="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700 transition">
+                                        Eliminar
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="px-4 py-8 text-center text-sm font-semibold text-gray-400">
+                            Sin registros
                         </td>
                     </tr>
                     {% endfor %}

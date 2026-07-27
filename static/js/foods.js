@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const bulkActionBar = document.getElementById('bulkActionBar');
   const selectedCount = document.getElementById('selectedCount');
   const bulkFoodInputs = document.getElementById('bulkFoodInputs');
+  const bulkDeleteFoodInputs = document.getElementById('bulkDeleteFoodInputs');
   const cancelBulkSelectionBtn = document.getElementById('cancelBulkSelectionBtn');
 
   const updateBulkSelection = () => {
@@ -18,16 +19,17 @@ document.addEventListener('DOMContentLoaded', () => {
       selectedCount.textContent = selectedCountValue;
     }
 
-    if (bulkFoodInputs) {
-      bulkFoodInputs.innerHTML = '';
+    const bulkInputContainers = [bulkFoodInputs, bulkDeleteFoodInputs].filter(Boolean);
+    bulkInputContainers.forEach((container) => {
+      container.innerHTML = '';
       selectedCheckboxes.forEach((checkbox) => {
         const input = document.createElement('input');
         input.type = 'hidden';
         input.name = 'selected_foods';
         input.value = checkbox.dataset.foodId;
-        bulkFoodInputs.appendChild(input);
+        container.appendChild(input);
       });
-    }
+    });
 
     if (selectAllCheckbox) {
       selectAllCheckbox.checked =

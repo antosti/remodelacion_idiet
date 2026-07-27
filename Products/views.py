@@ -229,6 +229,75 @@ def deactivate_foods_bulk(request):
 
 
 @login_required
+def reactivate_food(request, id):
+    if request.method == 'POST':
+        product = get_object_or_404(Product, id=id, is_active=False)
+        product.is_active = True
+        product.save(update_fields=['is_active'])
+        messages.success(request, 'Alimento reactivado correctamente')
+
+    return redirect('list_deactive_foods')
+
+
+@login_required
+def reactivate_foods_bulk(request):
+    if request.method == 'POST':
+        product_ids = request.POST.getlist('selected_foods')
+        count = Product.objects.filter(
+            id__in=product_ids,
+            is_active=False,
+        ).update(is_active=True)
+
+        if count:
+            messages.success(
+                request,
+                f'{count} alimento(s) reactivado(s) correctamente',
+            )
+        else:
+            messages.warning(
+                request,
+                'No se seleccionaron alimentos válidos para reactivar',
+            )
+
+    return redirect('list_deactive_foods')
+
+
+@login_required
+def delete_food(request, id):
+    if request.method == 'POST':
+        product = get_object_or_404(Product, id=id, is_active=False)
+        product.delete()
+        messages.success(request, 'Alimento eliminado definitivamente')
+
+    return redirect('list_deactive_foods')
+
+
+@login_required
+def delete_foods_bulk(request):
+    if request.method == 'POST':
+        product_ids = request.POST.getlist('selected_foods')
+        products = Product.objects.filter(
+            id__in=product_ids,
+            is_active=False,
+        )
+        count = products.count()
+
+        if count:
+            products.delete()
+            messages.success(
+                request,
+                f'{count} alimento(s) eliminado(s) definitivamente',
+            )
+        else:
+            messages.warning(
+                request,
+                'No se seleccionaron alimentos válidos para eliminar',
+            )
+
+    return redirect('list_deactive_foods')
+
+
+@login_required
 def list_active_foods(request):
     products = Product.objects.filter(is_active=True)
 
