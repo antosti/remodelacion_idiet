@@ -1,7 +1,9 @@
 from decimal import Decimal, InvalidOperation
 
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.shortcuts import render, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 
 from FoodGroup.models import FoodGroup
 from Micronutrients.models import Micronutrient
@@ -96,6 +98,7 @@ def get_decimal_value(request, field_name):
         return Decimal('0.00')
 
 
+@login_required
 def create_food(request):
     food_groups = FoodGroup.objects.all()
     super_groups = SuperGroup.objects.all()
@@ -191,6 +194,41 @@ def get_foods_list_context(request, products):
     }
 
 
+@login_required
+def deactivate_food(request, id):
+    if request.method == 'POST':
+        product = get_object_or_404(Product, id=id, is_active=True)
+        product.is_active = False
+        product.save(update_fields=['is_active'])
+        messages.success(request, 'Alimento desactivado correctamente')
+
+    return redirect('list_active_foods')
+
+
+@login_required
+def deactivate_foods_bulk(request):
+    if request.method == 'POST':
+        product_ids = request.POST.getlist('selected_foods')
+        count = Product.objects.filter(
+            id__in=product_ids,
+            is_active=True,
+        ).update(is_active=False)
+
+        if count:
+            messages.success(
+                request,
+                f'{count} alimento(s) desactivado(s) correctamente',
+            )
+        else:
+            messages.warning(
+                request,
+                'No se seleccionaron alimentos válidos para desactivar',
+            )
+
+    return redirect('list_active_foods')
+
+
+@login_required
 def list_active_foods(request):
     products = Product.objects.filter(is_active=True)
 
@@ -200,6 +238,7 @@ def list_active_foods(request):
     return render(request, 'admin/list_active_foods.html', context)
 
 
+@login_required
 def list_deactive_foods(request):
     products = Product.objects.filter(is_active=False)
 
