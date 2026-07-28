@@ -64,7 +64,7 @@
                         <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">Frecuencia</th>
                         <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">Unidades mínimas</th>
                         <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">Unidades máximas</th>
-                        <th class="text-right text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">Acciones</th>
+                        <th class="text-center text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">Acciones</th>
                     </tr>
                 </thead>
                 <tbody id="rulesTableBody">
@@ -79,7 +79,7 @@
                         <td class="px-4 py-4 text-gray-700 border-b border-gray-100">{{ rule.min }}</td>
                         <td class="px-4 py-4 text-gray-700 border-b border-gray-100">{{ rule.max }}</td>
                         <td class="px-4 py-4 border-b border-gray-100">
-                            <div class="flex justify-end gap-2">
+                            <div class="flex justify-center gap-2">
                                 <button type="button"
                                     class="edit-rule-btn rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
                                     data-action="{% url 'edit_rule' rule.id %}"
