@@ -14,9 +14,9 @@ class RuleForm(forms.ModelForm):
         model = Rule
         fields = ('super_group', 'min', 'max', 'frequency', 'level')
         labels = {
-            'super_group': 'Supergrupo',
-            'min': 'Mínimo',
-            'max': 'Máximo',
+            'super_group': 'Grupo de alimentos',
+            'min': 'Unidades mínimas',
+            'max': 'Unidades máximas',
             'frequency': 'Frecuencia',
             'level': 'Nivel',
         }

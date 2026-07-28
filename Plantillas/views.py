@@ -22,6 +22,7 @@ def list_rules(request):
         return redirect('list_rules')
 
     rules = Rule.objects.filter(user=request.user).select_related('super_group')
+
     return render(
         request,
         'admin/list_rules.html',

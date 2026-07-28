@@ -2,8 +2,8 @@
 {% block title %} Lista de reglas {% endblock %}
 
 {% block content %}
-<div class="w-full rounded-2xl bg-gray-50 p-6">
-    <div class="mb-6 flex flex-col gap-4 px-2 sm:flex-row sm:items-center sm:justify-between">
+<div class="w-full p-4 sm:p-6 bg-gray-50 rounded-2xl">
+    <div class="flex flex-col gap-3 px-2 mb-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
             <h1 class="text-2xl font-bold text-gray-700">Lista de Reglas</h1>
             <p class="mt-1 text-sm font-semibold text-gray-500">
@@ -11,35 +11,41 @@
             </p>
         </div>
         <button id="openRuleModal" type="button"
-            class="rounded-lg bg-idiet px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-idiet/90">
+            class="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-idiet text-white text-sm font-semibold shadow-sm hover:bg-idiet/90">
             Nueva regla
         </button>
     </div>
 
-    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+    <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-5">
+            <div class="flex flex-wrap items-center gap-2 text-gray-700">
+                <span class="text-sm font-semibold">Mostrando</span>
+                <span class="text-sm font-semibold text-idiet">{{ rules|length }}</span>
+                <span class="text-sm font-semibold">resultados</span>
+            </div>
+        </div>
+
         <div class="overflow-x-auto">
             <table class="w-full min-w-[760px]">
-                <thead class="bg-gray-50">
+                <thead>
                     <tr class="border-b border-gray-200">
-                        <th class="px-5 py-3 text-left text-sm font-bold text-gray-700">Supergrupo</th>
-                        <th class="px-5 py-3 text-left text-sm font-bold text-gray-700">Mínimo</th>
-                        <th class="px-5 py-3 text-left text-sm font-bold text-gray-700">Máximo</th>
-                        <th class="px-5 py-3 text-left text-sm font-bold text-gray-700">Frecuencia</th>
-                        <th class="px-5 py-3 text-left text-sm font-bold text-gray-700">Nivel</th>
+                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">Grupo de alimentos</th>
+                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">Frecuencia</th>
+                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">Unidades mínimas</th>
+                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">Unidades máximas</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="rulesTableBody">
                     {% for rule in rules %}
-                    <tr class="border-b border-gray-100 last:border-0 hover:bg-gray-50">
-                        <td class="px-5 py-4 font-semibold text-gray-700">{{ rule.super_group.name }}</td>
-                        <td class="px-5 py-4 text-gray-600">{{ rule.min }}</td>
-                        <td class="px-5 py-4 text-gray-600">{{ rule.max }}</td>
-                        <td class="px-5 py-4 text-gray-600">{{ rule.frequency }}</td>
-                        <td class="px-5 py-4 text-gray-600">{{ rule.level }}</td>
+                    <tr class="rule-row hover:bg-gray-50">
+                        <td class="px-4 py-4 font-semibold text-gray-700 border-b border-gray-100">{{ rule.super_group.name }}</td>
+                        <td class="px-4 py-4 text-gray-700 border-b border-gray-100">{{ rule.frequency }}</td>
+                        <td class="px-4 py-4 text-gray-700 border-b border-gray-100">{{ rule.min }}</td>
+                        <td class="px-4 py-4 text-gray-700 border-b border-gray-100">{{ rule.max }}</td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="5" class="px-5 py-12 text-center text-sm text-gray-500">
+                        <td colspan="4" class="px-4 py-12 text-center text-sm text-gray-500 border-b border-gray-100">
                             Todavía no has creado ninguna regla.
                         </td>
                     </tr>
@@ -47,8 +53,10 @@
                 </tbody>
             </table>
         </div>
-        <div class="border-t border-gray-200 px-5 py-4 text-sm text-gray-600">
-            {{ rules|length }} regla{{ rules|length|pluralize:"s" }}
+        <div class="mt-5 flex flex-col gap-4 border-t border-gray-200 pt-4 md:flex-row md:items-center md:justify-between">
+            <p class="text-sm text-gray-600">
+                Mostrando {{ rules|length }} de {{ rules|length }} resultados
+            </p>
         </div>
     </div>
 </div>
@@ -131,6 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!modal.classList.contains('hidden')) {
         document.body.classList.add('overflow-hidden');
     }
+
 });
 </script>
 {% endblock %}
