@@ -1,7 +1,6 @@
 *__pycache__
 venv/
 .env
-*/migrations/
 node_modules/
 *.log
 static/dist/style.css

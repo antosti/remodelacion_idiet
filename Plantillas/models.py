@@ -2,6 +2,9 @@ from django.db import models
 from Users.models import User
 from Intakes.models import Intake
 from Dishes.models import Dish
+from SuperGroup.models import SuperGroup
+from django.core.validators import MinValueValidator
+from django.db.models import F, Q
 
 # Create your models here.
 
@@ -32,4 +35,40 @@ class TemplateIntake(models.Model):
     
     class Meta:
         db_table = 'template_intake'
-    
+
+
+class Rule(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='rules')
+    super_group = models.ForeignKey(
+        SuperGroup,
+        on_delete=models.CASCADE,
+        related_name='rules',
+    )
+    min = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+    )
+    max = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+    )
+    frequency = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    level = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+
+    def __str__(self):
+        return f'{self.super_group} - nivel {self.level}'
+
+    class Meta:
+        db_table = 'rules'
+        ordering = ['level', 'super_group__name', 'id']
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(min__lte=F('max')),
+                name='rules_min_lte_max',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['user'], name='rules_user_idx'),
+        ]
