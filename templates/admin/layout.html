@@ -20,6 +20,11 @@
                             class="h-16 w-auto" />
                     </a>
                 </div>
+                {% if request.database_alias == 'training' %}
+                <div class="mt-2 rounded-xl bg-amber-300 px-3 py-2 text-center text-xs font-bold uppercase tracking-wide text-amber-950">
+                    Entorno de formación
+                </div>
+                {% endif %}
                 <div class="mt-2 flex-1">
                     <div class="divide-y divide-secondary/80">
                         <div class="space-y-3 pt-2 pb-8 text-secondary">

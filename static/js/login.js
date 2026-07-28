@@ -26,5 +26,5 @@ document.addEventListener('DOMContentLoaded', () => {
     setActiveTab(tab);
   };
 
-  setActiveTab('clientes');
+  setActiveTab(userTypeInput.value || 'clientes');
 });

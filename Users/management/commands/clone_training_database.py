@@ -1,0 +1,1 @@
+from idiet.management.commands.clone_training_database import Command

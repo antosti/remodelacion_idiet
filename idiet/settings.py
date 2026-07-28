@@ -55,6 +55,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'idiet.middleware.DatabaseEnvironmentMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -92,13 +93,26 @@ WSGI_APPLICATION = 'idiet.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'idiet_django',
-        'USER': 'root',
-        'PASSWORD': 'root',
-        'HOST':'localhost',
-        'PORT':'3306',
-    }
+        'NAME': os.environ.get('IDIET_DATABASE_NAME', 'idiet_django'),
+        'USER': os.environ.get('IDIET_DATABASE_USER', 'root'),
+        'PASSWORD': os.environ.get('IDIET_DATABASE_PASSWORD', 'root'),
+        'HOST': os.environ.get('IDIET_DATABASE_HOST', 'localhost'),
+        'PORT': os.environ.get('IDIET_DATABASE_PORT', '3306'),
+    },
+    'training': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': os.environ.get('IDIET_TRAINING_DATABASE_NAME', 'idiet_django_formacion'),
+        'USER': os.environ.get('IDIET_TRAINING_DATABASE_USER', os.environ.get('IDIET_DATABASE_USER', 'root')),
+        'PASSWORD': os.environ.get('IDIET_TRAINING_DATABASE_PASSWORD', os.environ.get('IDIET_DATABASE_PASSWORD', 'root')),
+        'HOST': os.environ.get('IDIET_TRAINING_DATABASE_HOST', os.environ.get('IDIET_DATABASE_HOST', 'localhost')),
+        'PORT': os.environ.get('IDIET_TRAINING_DATABASE_PORT', os.environ.get('IDIET_DATABASE_PORT', '3306')),
+    },
 }
+
+DATABASE_ROUTERS = ['idiet.db_router.EnvironmentDatabaseRouter']
+
+# Permite conocer la base elegida antes de consultar al usuario autenticado.
+SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 
 
 # Password validation

@@ -27,7 +27,7 @@ class Client(models.Model):
     dni = models.CharField(max_length=15)
     phone_number = models.CharField(max_length=12)
     phone_number_2 = models.CharField(max_length=12)
-    address = models.CharField(max_length=30)
+    address = models.CharField(max_length=200)
     postal_code = models.CharField(max_length=10)
     city = models.CharField(max_length=50)
     activity_level = models.CharField(max_length=20, choices=ACTIVITY_LEVELS_CHOICES)
