@@ -255,7 +255,7 @@
                                     <a href="{% url 'list_rules' %}"
                                         class="block rounded-lg px-4 py-2 text-sm font-medium text-gray-300 hover:bg-white/10">
                                         Lista de Reglas</a>
-                                    <a href="#"
+                                    <a href="{% url 'list_deactivated_rules' %}"
                                         class="block rounded-lg px-4 py-2 text-sm font-medium text-gray-300 hover:bg-white/10">Reglas
                                         Desactivadas</a>
                                     <a href="#"
@@ -683,7 +683,7 @@
                                                     <a href="{% url 'list_rules' %}"
                                                         class="block rounded-lg px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/10">
                                                         Lista de Reglas</a>
-                                                    <a href="#"
+                                                    <a href="{% url 'list_deactivated_rules' %}"
                                                         class="block rounded-lg px-3 py-2 text-sm font-medium text-gray-300 hover:bg-white/10">Reglas
                                                         Desactivadas</a>
                                                     <a href="#"
@@ -801,7 +801,7 @@
                         <button
                         type="button"
                         class="ml-2 text-xl leading-none opacity-80 hover:opacity-100"
-                        onclick="this.closest('[data-alert]').remove()"
+                        data-dismiss-alert
                         >
                         &times;
                         </button>

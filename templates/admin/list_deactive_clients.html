@@ -203,7 +203,7 @@
                             {{ client.email }}
                         </td>
                         <td class="px-4 py-4 border-b border-gray-100">
-                            <form method="POST" action="{% url 'reactivate_client' client.id %}" onsubmit="return confirm('¿Reactivar este cliente?')">
+                            <form method="POST" action="{% url 'reactivate_client' client.id %}" data-confirm="¿Reactivar este cliente?">
                                 {% csrf_token %}
                                 <button type="submit"
                                     class="px-3 py-2 rounded-lg bg-green-600 text-sm font-semibold text-white hover:bg-green-700 transition">

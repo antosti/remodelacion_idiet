@@ -1,0 +1,128 @@
+{% extends 'admin/layout.html' %}
+{% block title %} Reglas desactivadas {% endblock %}
+{% load static %}
+
+{% block content %}
+<div class="w-full p-4 sm:p-6 bg-gray-50 rounded-2xl">
+    <div class="flex flex-col gap-3 px-2 mb-6 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-700">Reglas Desactivadas</h1>
+            <p class="mt-1 text-sm font-semibold text-gray-500">
+                Reactiva o elimina definitivamente tus reglas desactivadas
+            </p>
+        </div>
+        <a href="{% url 'list_rules' %}"
+            class="w-full sm:w-auto px-4 py-2.5 rounded-lg border border-gray-300 bg-white text-center text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50">
+            Volver a reglas activas
+        </a>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+        <div class="flex flex-wrap items-center gap-2 text-gray-700 mb-5">
+            <span class="text-sm font-semibold">Mostrando</span>
+            <span class="text-sm font-semibold text-idiet">{{ rules|length }}</span>
+            <span class="text-sm font-semibold">resultados</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <div id="bulkActionBar"
+                class="hidden mb-4 rounded-2xl border border-secondary/20 bg-secondary/10 p-4 text-secondary">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm font-semibold"><span id="selectedCount">0</span> regla(s) seleccionada(s)</p>
+                        <p class="text-sm text-gray-600">Reactiva o elimina definitivamente la selección.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" id="cancelBulkSelectionBtn"
+                            class="px-4 py-2 rounded-lg bg-white text-sm font-semibold text-gray-700 border border-gray-300 hover:bg-gray-50">
+                            Cancelar
+                        </button>
+                        <button type="submit" form="bulkRulesForm"
+                            formaction="{% url 'reactivate_rules_bulk' %}"
+                            class="px-4 py-2 rounded-lg bg-idiet text-white text-sm font-semibold hover:bg-idiet/90">
+                            Reactivar seleccionadas
+                        </button>
+                        <button type="submit" form="bulkRulesForm"
+                            formaction="{% url 'delete_rules_bulk' %}"
+                            data-confirm="¿Eliminar definitivamente las reglas seleccionadas? Esta acción no se puede deshacer."
+                            class="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700">
+                            Eliminar seleccionadas
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <form id="bulkRulesForm" method="POST">
+                {% csrf_token %}
+                <div id="bulkRuleInputs"></div>
+            </form>
+
+            <table class="w-full min-w-[900px]">
+                <thead>
+                    <tr class="border-b border-gray-200">
+                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200 w-12">
+                            <input id="selectAllRules" type="checkbox"
+                                class="rounded border-gray-300 text-secondary focus:ring-secondary/30">
+                        </th>
+                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">Grupo de alimentos</th>
+                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">Frecuencia</th>
+                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">Unidades mínimas</th>
+                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">Unidades máximas</th>
+                        <th class="text-right text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rule in rules %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-4 border-b border-gray-100">
+                            <input type="checkbox"
+                                class="rule-checkbox rounded border-gray-300 text-secondary focus:ring-secondary/30"
+                                data-rule-id="{{ rule.id }}">
+                        </td>
+                        <td class="px-4 py-4 font-semibold text-gray-700 border-b border-gray-100">{{ rule.super_group.name }}</td>
+                        <td class="px-4 py-4 text-gray-700 border-b border-gray-100">{{ rule.get_frequency_display }}</td>
+                        <td class="px-4 py-4 text-gray-700 border-b border-gray-100">{{ rule.min }}</td>
+                        <td class="px-4 py-4 text-gray-700 border-b border-gray-100">{{ rule.max }}</td>
+                        <td class="px-4 py-4 border-b border-gray-100">
+                            <div class="flex justify-end gap-2">
+                                <form method="POST" action="{% url 'reactivate_rule' rule.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit"
+                                        class="rounded-lg bg-idiet px-3 py-2 text-sm font-semibold text-white hover:bg-idiet/90">
+                                        Reactivar
+                                    </button>
+                                </form>
+                                <form method="POST" action="{% url 'delete_rule' rule.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit"
+                                        data-confirm="¿Eliminar definitivamente esta regla? Esta acción no se puede deshacer."
+                                        class="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700">
+                                        Eliminar
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="px-4 py-12 text-center text-sm text-gray-500 border-b border-gray-100">
+                            No tienes reglas desactivadas.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-5 flex flex-col gap-4 border-t border-gray-200 pt-4 md:flex-row md:items-center md:justify-between">
+            <p class="text-sm text-gray-600">
+                Mostrando {{ rules|length }} de {{ rules|length }} resultados
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/rules.js' %}"></script>
+{% endblock %}

@@ -271,7 +271,7 @@
                     <tbody>
                         {% for appointment in appointments %}
                         <tr class="hover:bg-gray-50" data-appointment-id="{{ appointment.id }}" data-client-id="{{ appointment.client.id }}" data-motive="{{ appointment.motive|escape }}" data-start-date="{{ appointment.start_date|date:'c' }}" data-end-date="{{ appointment.end_date|date:'c' }}" style="cursor: pointer;">
-                            <td class="px-4 py-4 border-b border-gray-100" onclick="event.stopPropagation()">
+                            <td class="px-4 py-4 border-b border-gray-100" data-row-edit-ignore>
                                 <input type="checkbox" class="appointment-checkbox rounded border-gray-300 text-secondary focus:ring-secondary/30" data-appointment-id="{{ appointment.id }}">
                             </td>
                             <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
@@ -286,8 +286,8 @@
                             <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
                                 {{ appointment.start_date }}
                             </td>
-                            <td class="px-4 py-4 text-gray-700 border-b border-gray-100 flex gap-2" onclick="event.stopPropagation()">
-                                <a href="{% url 'deactivate_appointment' appointment.id %}" class="px-3 py-1 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition" onclick="return confirm('¿Desactivar esta cita?')">
+                            <td class="px-4 py-4 text-gray-700 border-b border-gray-100 flex gap-2" data-row-edit-ignore>
+                                <a href="{% url 'deactivate_appointment' appointment.id %}" class="px-3 py-1 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition" data-confirm="¿Desactivar esta cita?">
                                     Cancelar
                                 </a>
                             </td>
@@ -376,13 +376,11 @@
             {% endif %}
         </div>
     </div>
-    <div class="w-full lg:w-1/2 min-w-0 bg-gray-50 rounded-2xl p-6" id="calendar"></div>
+    <div class="w-full lg:w-1/2 min-w-0 bg-gray-50 rounded-2xl p-6" id="calendar"
+        data-appointment-events="{{ appointment_events|escape }}"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
-<script>
-    window.appointmentEvents = {{ appointment_events|safe }};
-</script>
 <script src="{% static 'js/appointments.js' %}"></script>
 
 

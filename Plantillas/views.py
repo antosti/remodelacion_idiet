@@ -79,3 +79,69 @@ def deactivate_rules_bulk(request):
     else:
         messages.warning(request, 'No se seleccionaron reglas válidas para desactivar.')
     return redirect('list_rules')
+
+
+@login_required
+def list_deactivated_rules(request):
+    rules = Rule.objects.filter(
+        user=request.user,
+        active=False,
+    ).select_related('super_group')
+    return render(
+        request,
+        'admin/list_deactivated_rules.html',
+        {'rules': rules},
+    )
+
+
+@login_required
+@require_POST
+def reactivate_rule(request, id):
+    rule = get_object_or_404(Rule, id=id, user=request.user, active=False)
+    rule.active = True
+    rule.save(update_fields=['active'])
+    messages.success(request, 'La regla se ha reactivado correctamente.')
+    return redirect('list_deactivated_rules')
+
+
+@login_required
+@require_POST
+def delete_rule(request, id):
+    rule = get_object_or_404(Rule, id=id, user=request.user, active=False)
+    rule.delete()
+    messages.success(request, 'La regla se ha eliminado definitivamente.')
+    return redirect('list_deactivated_rules')
+
+
+@login_required
+@require_POST
+def reactivate_rules_bulk(request):
+    rule_ids = request.POST.getlist('selected_rules')
+    count = Rule.objects.filter(
+        id__in=rule_ids,
+        user=request.user,
+        active=False,
+    ).update(active=True)
+    if count:
+        messages.success(request, f'{count} regla(s) reactivada(s) correctamente.')
+    else:
+        messages.warning(request, 'No se seleccionaron reglas válidas para reactivar.')
+    return redirect('list_deactivated_rules')
+
+
+@login_required
+@require_POST
+def delete_rules_bulk(request):
+    rule_ids = request.POST.getlist('selected_rules')
+    queryset = Rule.objects.filter(
+        id__in=rule_ids,
+        user=request.user,
+        active=False,
+    )
+    count = queryset.count()
+    queryset.delete()
+    if count:
+        messages.success(request, f'{count} regla(s) eliminada(s) definitivamente.')
+    else:
+        messages.warning(request, 'No se seleccionaron reglas válidas para eliminar.')
+    return redirect('list_deactivated_rules')

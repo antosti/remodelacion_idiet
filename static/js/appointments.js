@@ -195,7 +195,7 @@ try {
     const rows = document.querySelectorAll('#appointmentsTable tbody tr[data-appointment-id]')
     rows.forEach((row) => {
         row.addEventListener('click', (e) => {
-            if (e.target && (e.target.tagName === 'INPUT' || e.target.closest('input'))) return
+            if (e.target.closest('[data-row-edit-ignore]')) return
             const id = row.dataset.appointmentId
             const cells = row.querySelectorAll('td')
             if (!cells || cells.length < 5) return
@@ -246,8 +246,10 @@ try {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
-const appointmentEvents = window.appointmentEvents || [];
 const calendarEl = document.getElementById("calendar");
+const appointmentEvents = calendarEl?.dataset.appointmentEvents
+    ? JSON.parse(calendarEl.dataset.appointmentEvents)
+    : [];
 
 const calendar = new FullCalendar.Calendar(calendarEl, {
 initialView: "dayGridMonth",

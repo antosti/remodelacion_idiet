@@ -85,7 +85,7 @@
                             Cancelar
                         </button>
                         <button type="submit" form="bulkDeactivateForm"
-                            onclick="return confirm('¿Desactivar los alimentos seleccionados?')"
+                            data-confirm="¿Desactivar los alimentos seleccionados?"
                             class="px-4 py-2 rounded-lg bg-idiet text-white text-sm font-semibold hover:bg-idiet/90">
                             Desactivar seleccionados
                         </button>
@@ -253,7 +253,7 @@
                         </td>
                         <td class="px-4 py-4 border-b border-gray-100">
                             <form method="POST" action="{% url 'deactivate_food' product.id %}"
-                                onsubmit="return confirm('¿Desactivar este alimento?')">
+                                data-confirm="¿Desactivar este alimento?">
                                 {% csrf_token %}
                                 <button type="submit"
                                     class="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700 transition">

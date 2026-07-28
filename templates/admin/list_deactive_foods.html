@@ -84,12 +84,12 @@
                             Cancelar
                         </button>
                         <button type="submit" form="bulkReactivateForm"
-                            onclick="return confirm('¿Reactivar los alimentos seleccionados?')"
+                            data-confirm="¿Reactivar los alimentos seleccionados?"
                             class="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700">
                             Reactivar seleccionados
                         </button>
                         <button type="submit" form="bulkDeleteForm"
-                            onclick="return confirm('¿Eliminar definitivamente los alimentos seleccionados? Esta acción no se puede deshacer.')"
+                            data-confirm="¿Eliminar definitivamente los alimentos seleccionados? Esta acción no se puede deshacer."
                             class="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700">
                             Eliminar seleccionados
                         </button>
@@ -263,7 +263,7 @@
                         <td class="px-4 py-4 border-b border-gray-100">
                             <div class="flex flex-wrap gap-2">
                                 <form method="POST" action="{% url 'reactivate_food' product.id %}"
-                                    onsubmit="return confirm('¿Reactivar este alimento?')">
+                                    data-confirm="¿Reactivar este alimento?">
                                     {% csrf_token %}
                                     <button type="submit"
                                         class="rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white hover:bg-green-700 transition">
@@ -271,7 +271,7 @@
                                     </button>
                                 </form>
                                 <form method="POST" action="{% url 'delete_food' product.id %}"
-                                    onsubmit="return confirm('¿Eliminar definitivamente este alimento? Esta acción no se puede deshacer.')">
+                                    data-confirm="¿Eliminar definitivamente este alimento? Esta acción no se puede deshacer.">
                                     {% csrf_token %}
                                     <button type="submit"
                                         class="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700 transition">

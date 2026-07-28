@@ -1,5 +1,6 @@
 {% extends 'admin/layout.html' %}
 {% block title %} Lista de reglas {% endblock %}
+{% load static %}
 
 {% block content %}
 <div class="w-full p-4 sm:p-6 bg-gray-50 rounded-2xl">
@@ -39,7 +40,7 @@
                             Cancelar
                         </button>
                         <button type="submit" form="bulkDeactivateRulesForm"
-                            onclick="return confirm('¿Desactivar las reglas seleccionadas?')"
+                            data-confirm="¿Desactivar las reglas seleccionadas?"
                             class="px-4 py-2 rounded-lg bg-idiet text-white text-sm font-semibold hover:bg-idiet/90">
                             Desactivar seleccionadas
                         </button>
@@ -91,7 +92,7 @@
                                 </button>
                                 <form method="POST" action="{% url 'deactivate_rule' rule.id %}">
                                     {% csrf_token %}
-                                    <button type="submit" onclick="return confirm('¿Desactivar esta regla?')"
+                                    <button type="submit" data-confirm="¿Desactivar esta regla?"
                                         class="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700">
                                         Desactivar
                                     </button>
@@ -236,85 +237,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const modal = document.getElementById('ruleModal');
-    const openButton = document.getElementById('openRuleModal');
-    const closeButtons = document.querySelectorAll('[data-close-rule-modal]');
-
-    const openModal = () => {
-        modal.classList.remove('hidden');
-        document.body.classList.add('overflow-hidden');
-    };
-    const closeModal = () => {
-        modal.classList.add('hidden');
-        document.body.classList.remove('overflow-hidden');
-    };
-
-    openButton.addEventListener('click', openModal);
-    closeButtons.forEach((button) => button.addEventListener('click', closeModal));
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') closeModal();
-    });
-
-    if (!modal.classList.contains('hidden')) {
-        document.body.classList.add('overflow-hidden');
-    }
-
-    const selectAll = document.getElementById('selectAllRules');
-    const checkboxes = Array.from(document.querySelectorAll('.rule-checkbox'));
-    const bulkActionBar = document.getElementById('bulkActionBar');
-    const selectedCount = document.getElementById('selectedCount');
-    const bulkInputs = document.getElementById('bulkRuleInputs');
-    const cancelBulk = document.getElementById('cancelBulkSelectionBtn');
-
-    const updateBulkSelection = () => {
-        const selected = checkboxes.filter((checkbox) => checkbox.checked);
-        bulkActionBar.classList.toggle('hidden', selected.length === 0);
-        selectedCount.textContent = selected.length;
-        bulkInputs.innerHTML = '';
-        selected.forEach((checkbox) => {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'selected_rules';
-            input.value = checkbox.dataset.ruleId;
-            bulkInputs.appendChild(input);
-        });
-        selectAll.checked = selected.length > 0 && selected.length === checkboxes.length;
-        selectAll.indeterminate = selected.length > 0 && selected.length < checkboxes.length;
-    };
-
-    selectAll.addEventListener('change', () => {
-        checkboxes.forEach((checkbox) => checkbox.checked = selectAll.checked);
-        updateBulkSelection();
-    });
-    checkboxes.forEach((checkbox) => checkbox.addEventListener('change', updateBulkSelection));
-    cancelBulk.addEventListener('click', () => {
-        checkboxes.forEach((checkbox) => checkbox.checked = false);
-        updateBulkSelection();
-    });
-
-    const editModal = document.getElementById('editRuleModal');
-    const editForm = document.getElementById('editRuleForm');
-    const closeEditButtons = document.querySelectorAll('[data-close-edit-modal]');
-    const closeEditModal = () => {
-        editModal.classList.add('hidden');
-        document.body.classList.remove('overflow-hidden');
-    };
-
-    document.querySelectorAll('.edit-rule-btn').forEach((button) => {
-        button.addEventListener('click', () => {
-            editForm.action = button.dataset.action;
-            document.getElementById('editSuperGroup').value = button.dataset.superGroup;
-            document.getElementById('editMin').value = button.dataset.min.replace(',', '.');
-            document.getElementById('editMax').value = button.dataset.max.replace(',', '.');
-            document.getElementById('editFrequency').value = button.dataset.frequency;
-            document.getElementById('editLevel').value = button.dataset.level;
-            editModal.classList.remove('hidden');
-            document.body.classList.add('overflow-hidden');
-        });
-    });
-    closeEditButtons.forEach((button) => button.addEventListener('click', closeEditModal));
-});
-</script>
+<script src="{% static 'js/rules.js' %}"></script>
 {% endblock %}

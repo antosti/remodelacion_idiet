@@ -26,5 +26,9 @@ document.addEventListener('DOMContentLoaded', () => {
     setActiveTab(tab);
   };
 
+  tabButtons.forEach((button) => {
+    button.addEventListener('click', () => setActiveTab(button.dataset.tab));
+  });
+
   setActiveTab(userTypeInput.value || 'clientes');
 });
