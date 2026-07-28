@@ -26,26 +26,82 @@
         </div>
 
         <div class="overflow-x-auto">
+            <div id="bulkActionBar"
+                class="hidden mb-4 rounded-2xl border border-secondary/20 bg-secondary/10 p-4 text-secondary">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p class="text-sm font-semibold"><span id="selectedCount">0</span> regla(s) seleccionada(s)</p>
+                        <p class="text-sm text-gray-600">Puedes desactivar todas las reglas seleccionadas.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" id="cancelBulkSelectionBtn"
+                            class="px-4 py-2 rounded-lg bg-white text-sm font-semibold text-gray-700 border border-gray-300 hover:bg-gray-50">
+                            Cancelar
+                        </button>
+                        <button type="submit" form="bulkDeactivateRulesForm"
+                            onclick="return confirm('¿Desactivar las reglas seleccionadas?')"
+                            class="px-4 py-2 rounded-lg bg-idiet text-white text-sm font-semibold hover:bg-idiet/90">
+                            Desactivar seleccionadas
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <form id="bulkDeactivateRulesForm" method="POST" action="{% url 'deactivate_rules_bulk' %}">
+                {% csrf_token %}
+                <div id="bulkRuleInputs"></div>
+            </form>
+
             <table class="w-full min-w-[760px]">
                 <thead>
                     <tr class="border-b border-gray-200">
+                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200 w-12">
+                            <input id="selectAllRules" type="checkbox"
+                                class="rounded border-gray-300 text-secondary focus:ring-secondary/30">
+                        </th>
                         <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">Grupo de alimentos</th>
                         <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">Frecuencia</th>
                         <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">Unidades mínimas</th>
                         <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">Unidades máximas</th>
+                        <th class="text-right text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">Acciones</th>
                     </tr>
                 </thead>
                 <tbody id="rulesTableBody">
                     {% for rule in rules %}
                     <tr class="rule-row hover:bg-gray-50">
+                        <td class="px-4 py-4 border-b border-gray-100">
+                            <input type="checkbox" class="rule-checkbox rounded border-gray-300 text-secondary focus:ring-secondary/30"
+                                data-rule-id="{{ rule.id }}">
+                        </td>
                         <td class="px-4 py-4 font-semibold text-gray-700 border-b border-gray-100">{{ rule.super_group.name }}</td>
-                        <td class="px-4 py-4 text-gray-700 border-b border-gray-100">{{ rule.frequency }}</td>
+                        <td class="px-4 py-4 text-gray-700 border-b border-gray-100">{{ rule.get_frequency_display }}</td>
                         <td class="px-4 py-4 text-gray-700 border-b border-gray-100">{{ rule.min }}</td>
                         <td class="px-4 py-4 text-gray-700 border-b border-gray-100">{{ rule.max }}</td>
+                        <td class="px-4 py-4 border-b border-gray-100">
+                            <div class="flex justify-end gap-2">
+                                <button type="button"
+                                    class="edit-rule-btn rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                                    data-action="{% url 'edit_rule' rule.id %}"
+                                    data-super-group="{{ rule.super_group_id }}"
+                                    data-min="{{ rule.min }}"
+                                    data-max="{{ rule.max }}"
+                                    data-frequency="{{ rule.frequency }}"
+                                    data-level="{{ rule.level }}">
+                                    Editar
+                                </button>
+                                <form method="POST" action="{% url 'deactivate_rule' rule.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" onclick="return confirm('¿Desactivar esta regla?')"
+                                        class="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700">
+                                        Desactivar
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="4" class="px-4 py-12 text-center text-sm text-gray-500 border-b border-gray-100">
+                        <td colspan="6" class="px-4 py-12 text-center text-sm text-gray-500 border-b border-gray-100">
                             Todavía no has creado ninguna regla.
                         </td>
                     </tr>
@@ -58,6 +114,71 @@
                 Mostrando {{ rules|length }} de {{ rules|length }} resultados
             </p>
         </div>
+    </div>
+</div>
+
+<div id="editRuleModal"
+    class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"
+    role="dialog" aria-modal="true" aria-labelledby="editRuleModalTitle">
+    <button type="button" data-close-edit-modal
+        class="absolute inset-0 bg-gray-900/50" aria-label="Cerrar modal"></button>
+    <div class="relative z-10 w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl">
+        <div class="mb-5 flex items-center justify-between">
+            <div>
+                <h2 id="editRuleModalTitle" class="text-xl font-bold text-gray-800">Editar regla</h2>
+                <p class="mt-1 text-sm text-gray-500">Modifica los valores de la regla seleccionada.</p>
+            </div>
+            <button type="button" data-close-edit-modal
+                class="rounded-lg p-2 text-2xl leading-none text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                aria-label="Cerrar">&times;</button>
+        </div>
+
+        <form id="editRuleForm" method="POST" novalidate>
+            {% csrf_token %}
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div class="sm:col-span-2">
+                    <label for="editSuperGroup" class="mb-1.5 block text-sm font-semibold text-gray-700">Grupo de alimentos</label>
+                    <select id="editSuperGroup" name="super_group" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-700 outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30" required>
+                        {% for super_group in super_groups %}
+                        <option value="{{ super_group.id }}">{{ super_group.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="editMin" class="mb-1.5 block text-sm font-semibold text-gray-700">Unidades mínimas</label>
+                    <input id="editMin" name="min" type="number" min="0" step="0.01" required
+                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-700 outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30">
+                </div>
+                <div>
+                    <label for="editMax" class="mb-1.5 block text-sm font-semibold text-gray-700">Unidades máximas</label>
+                    <input id="editMax" name="max" type="number" min="0" step="0.01" required
+                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-700 outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30">
+                </div>
+                <div>
+                    <label for="editFrequency" class="mb-1.5 block text-sm font-semibold text-gray-700">Frecuencia</label>
+                    <select id="editFrequency" name="frequency" required
+                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-700 outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30">
+                        <option value="daily">Diaria</option>
+                        <option value="weekly">Semanal</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="editLevel" class="mb-1.5 block text-sm font-semibold text-gray-700">Nivel</label>
+                    <input id="editLevel" name="level" type="number" min="1" step="1" required
+                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-700 outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30">
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" data-close-edit-modal
+                    class="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">
+                    Cancelar
+                </button>
+                <button type="submit"
+                    class="rounded-lg bg-idiet px-5 py-2.5 text-sm font-semibold text-white hover:bg-idiet/90">
+                    Guardar cambios
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -140,6 +261,60 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.add('overflow-hidden');
     }
 
+    const selectAll = document.getElementById('selectAllRules');
+    const checkboxes = Array.from(document.querySelectorAll('.rule-checkbox'));
+    const bulkActionBar = document.getElementById('bulkActionBar');
+    const selectedCount = document.getElementById('selectedCount');
+    const bulkInputs = document.getElementById('bulkRuleInputs');
+    const cancelBulk = document.getElementById('cancelBulkSelectionBtn');
+
+    const updateBulkSelection = () => {
+        const selected = checkboxes.filter((checkbox) => checkbox.checked);
+        bulkActionBar.classList.toggle('hidden', selected.length === 0);
+        selectedCount.textContent = selected.length;
+        bulkInputs.innerHTML = '';
+        selected.forEach((checkbox) => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'selected_rules';
+            input.value = checkbox.dataset.ruleId;
+            bulkInputs.appendChild(input);
+        });
+        selectAll.checked = selected.length > 0 && selected.length === checkboxes.length;
+        selectAll.indeterminate = selected.length > 0 && selected.length < checkboxes.length;
+    };
+
+    selectAll.addEventListener('change', () => {
+        checkboxes.forEach((checkbox) => checkbox.checked = selectAll.checked);
+        updateBulkSelection();
+    });
+    checkboxes.forEach((checkbox) => checkbox.addEventListener('change', updateBulkSelection));
+    cancelBulk.addEventListener('click', () => {
+        checkboxes.forEach((checkbox) => checkbox.checked = false);
+        updateBulkSelection();
+    });
+
+    const editModal = document.getElementById('editRuleModal');
+    const editForm = document.getElementById('editRuleForm');
+    const closeEditButtons = document.querySelectorAll('[data-close-edit-modal]');
+    const closeEditModal = () => {
+        editModal.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
+    };
+
+    document.querySelectorAll('.edit-rule-btn').forEach((button) => {
+        button.addEventListener('click', () => {
+            editForm.action = button.dataset.action;
+            document.getElementById('editSuperGroup').value = button.dataset.superGroup;
+            document.getElementById('editMin').value = button.dataset.min.replace(',', '.');
+            document.getElementById('editMax').value = button.dataset.max.replace(',', '.');
+            document.getElementById('editFrequency').value = button.dataset.frequency;
+            document.getElementById('editLevel').value = button.dataset.level;
+            editModal.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        });
+    });
+    closeEditButtons.forEach((button) => button.addEventListener('click', closeEditModal));
 });
 </script>
 {% endblock %}

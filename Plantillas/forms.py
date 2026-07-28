@@ -28,9 +28,7 @@ class RuleForm(forms.ModelForm):
             'max': forms.NumberInput(
                 attrs={'class': INPUT_CLASSES, 'min': '0', 'step': '0.01'}
             ),
-            'frequency': forms.NumberInput(
-                attrs={'class': INPUT_CLASSES, 'min': '1', 'step': '1'}
-            ),
+            'frequency': forms.Select(attrs={'class': INPUT_CLASSES}),
             'level': forms.NumberInput(
                 attrs={'class': INPUT_CLASSES, 'min': '1', 'step': '1'}
             ),

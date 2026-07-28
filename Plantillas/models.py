@@ -38,6 +38,10 @@ class TemplateIntake(models.Model):
 
 
 class Rule(models.Model):
+    class Frequency(models.TextChoices):
+        DAILY = 'daily', 'Diaria'
+        WEEKLY = 'weekly', 'Semanal'
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='rules')
     super_group = models.ForeignKey(
         SuperGroup,
@@ -54,8 +58,9 @@ class Rule(models.Model):
         decimal_places=2,
         validators=[MinValueValidator(0)],
     )
-    frequency = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    frequency = models.CharField(max_length=10, choices=Frequency.choices)
     level = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    active = models.BooleanField(default=True)
 
     def __str__(self):
         return f'{self.super_group} - nivel {self.level}'
