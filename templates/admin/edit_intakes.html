@@ -62,238 +62,109 @@
         </div>
     </form>
 
-    <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-5">
-            <div class="flex items-center gap-2 text-gray-700">
-                <span class="text-sm font-semibold">Mostrando</span>
-                <select class="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
-                    <option selected>10</option>
-                    <option>25</option>
-                    <option>50</option>
-                    <option>100</option>
-                </select>
-                <span class="text-sm font-semibold">Resultados</span>
+    <form method="POST" action="?{{ request.GET.urlencode }}">
+        {% csrf_token %}
+        <input type="hidden" name="intake_filter" value="{{ intake_filter }}">
+        <input type="hidden" name="dish_name" value="{{ dish_name }}">
+        <input type="hidden" name="product_filter" value="{{ product_filter }}">
+        <input type="hidden" name="sort" value="{{ current_sort }}">
+        <input type="hidden" name="direction" value="{{ current_direction }}">
+        <input type="hidden" name="page" value="{{ dish_list.number }}">
+        {% for dish in dish_list %}
+        <input type="hidden" name="dish_ids" value="{{ dish.id }}">
+        {% endfor %}
+
+        <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+            <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-5">
+                <div class="flex items-center gap-2 text-gray-700">
+                    <span class="text-sm font-semibold">Mostrando</span>
+                    <select class="border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
+                        <option selected>10</option>
+                        <option>25</option>
+                        <option>50</option>
+                        <option>100</option>
+                    </select>
+                    <span class="text-sm font-semibold">Resultados</span>
+                </div>
+
+                <button type="submit"
+                    class="px-5 py-2.5 rounded-lg bg-idiet text-white font-semibold shadow-sm hover:bg-idiet/90 focus:outline-none focus:ring-2 focus:ring-idiet/30">
+                    Guardar cambios
+                </button>
             </div>
-        </div>
 
-        <div class="overflow-x-auto">
-            <table class="w-full min-w-[980px]">
-                <thead>
-                    <tr class="border-b border-gray-200">
-                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200 w-12">
-                            <input type="checkbox"
-                                class="rounded border-gray-300 text-secondary focus:ring-secondary/30">
-                        </th>
+            <p class="text-xs text-gray-500 mb-4">
+                Haz clic en la celda de la receta y la ingesta correspondiente para asignarla o quitarla. No olvides pulsar "Guardar cambios".
+            </p>
 
-                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
-                            <a href="{{ sort_url_prefix }}sort=name&direction={% if current_sort == 'name' and current_direction == 'asc' %}desc{% else %}asc{% endif %}"
-                                class="flex items-center gap-4">
-                                Receta
-                                <svg class="h-4 w-4" fill="#ababab" viewBox="0 0 16 16"
-                                    xmlns="http://www.w3.org/2000/svg" stroke="#ababab">
-                                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
-                                    <g id="SVGRepo_iconCarrier">
-                                        <path d="M2 4H0l3-4 3 4H4v12H2V4zm12 8h2l-3 4-3-4h2V0h2v12z"
-                                            fill-rule="evenodd">
-                                        </path>
-                                    </g>
-                                </svg>
-                            </a>
-                        </th>
+            <div class="overflow-x-auto">
+                <table class="w-full min-w-[980px]">
+                    <thead>
+                        <tr class="border-b border-gray-200">
+                            <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200 w-12">
+                                <input type="checkbox"
+                                    class="rounded border-gray-300 text-secondary focus:ring-secondary/30">
+                            </th>
 
-                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
-                            <a href="{{ sort_url_prefix }}sort=kcal&direction={% if current_sort == 'kcal' and current_direction == 'asc' %}desc{% else %}asc{% endif %}"
-                                class="flex items-center gap-4">
-                                Desayuno
-                                <svg class="h-4 w-4" fill="#ababab" viewBox="0 0 16 16"
-                                    xmlns="http://www.w3.org/2000/svg" stroke="#ababab">
-                                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
-                                    <g id="SVGRepo_iconCarrier">
-                                        <path d="M2 4H0l3-4 3 4H4v12H2V4zm12 8h2l-3 4-3-4h2V0h2v12z"
-                                            fill-rule="evenodd">
-                                        </path>
-                                    </g>
-                                </svg>
-                            </a>
-                        </th>
+                            <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
+                                <a href="{{ sort_url_prefix }}sort=name&direction={% if current_sort == 'name' and current_direction == 'asc' %}desc{% else %}asc{% endif %}"
+                                    class="flex items-center gap-4">
+                                    Receta
+                                    <svg class="h-4 w-4" fill="#ababab" viewBox="0 0 16 16"
+                                        xmlns="http://www.w3.org/2000/svg" stroke="#ababab">
+                                        <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+                                        <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+                                        <g id="SVGRepo_iconCarrier">
+                                            <path d="M2 4H0l3-4 3 4H4v12H2V4zm12 8h2l-3 4-3-4h2V0h2v12z"
+                                                fill-rule="evenodd">
+                                            </path>
+                                        </g>
+                                    </svg>
+                                </a>
+                            </th>
 
-                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
-                            <a href="{{ sort_url_prefix }}sort=carbs&direction={% if current_sort == 'carbs' and current_direction == 'asc' %}desc{% else %}asc{% endif %}"
-                                class="flex items-center gap-4">
-                                Media mañana
-                                <svg class="h-4 w-4" fill="#ababab" viewBox="0 0 16 16"
-                                    xmlns="http://www.w3.org/2000/svg" stroke="#ababab">
-                                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
-                                    <g id="SVGRepo_iconCarrier">
-                                        <path d="M2 4H0l3-4 3 4H4v12H2V4zm12 8h2l-3 4-3-4h2V0h2v12z"
-                                            fill-rule="evenodd">
-                                        </path>
-                                    </g>
-                                </svg>
-                            </a>
-                        </th>
+                            {% for intake in intakes %}
+                            <th class="text-center text-sm font-bold text-gray-700 px-2 py-3 border-b border-gray-200">
+                                {{ intake.name }}
+                            </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
 
-                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
-                            <a href="{{ sort_url_prefix }}sort=protein&direction={% if current_sort == 'protein' and current_direction == 'asc' %}desc{% else %}asc{% endif %}"
-                                class="flex items-center gap-4">
-                                1º Plato Comida
-                                <svg class="h-4 w-4" fill="#ababab" viewBox="0 0 16 16"
-                                    xmlns="http://www.w3.org/2000/svg" stroke="#ababab">
-                                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
-                                    <g id="SVGRepo_iconCarrier">
-                                        <path d="M2 4H0l3-4 3 4H4v12H2V4zm12 8h2l-3 4-3-4h2V0h2v12z"
-                                            fill-rule="evenodd">
-                                        </path>
-                                    </g>
-                                </svg>
-                            </a>
-                        </th>
+                    <tbody>
+                        {% for dish in dish_list %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-4 py-4 border-b border-gray-100">
+                                <input type="checkbox"
+                                    class="rounded border-gray-300 text-secondary focus:ring-secondary/30">
+                            </td>
 
-                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
-                            <a href="{{ sort_url_prefix }}sort=fat&direction={% if current_sort == 'fat' and current_direction == 'asc' %}desc{% else %}asc{% endif %}"
-                                class="flex items-center gap-4">
-                                Plato Principal Comida
-                                <svg class="h-4 w-4" fill="#ababab" viewBox="0 0 16 16"
-                                    xmlns="http://www.w3.org/2000/svg" stroke="#ababab">
-                                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
-                                    <g id="SVGRepo_iconCarrier">
-                                        <path d="M2 4H0l3-4 3 4H4v12H2V4zm12 8h2l-3 4-3-4h2V0h2v12z"
-                                            fill-rule="evenodd">
-                                        </path>
-                                    </g>
-                                </svg>
-                            </a>
-                        </th>
+                            <td class="px-4 py-4 text-gray-700 border-b border-gray-100 font-semibold">
+                                {{ dish.name }}
+                            </td>
 
-                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
-                            <a href="{{ sort_url_prefix }}sort=origin&direction={% if current_sort == 'origin' and current_direction == 'asc' %}desc{% else %}asc{% endif %}"
-                                class="flex items-center gap-4">
-                                Postre
-                                <svg class="h-4 w-4" fill="#ababab" viewBox="0 0 16 16"
-                                    xmlns="http://www.w3.org/2000/svg" stroke="#ababab">
-                                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
-                                    <g id="SVGRepo_iconCarrier">
-                                        <path d="M2 4H0l3-4 3 4H4v12H2V4zm12 8h2l-3 4-3-4h2V0h2v12z"
-                                            fill-rule="evenodd">
-                                        </path>
-                                    </g>
-                                </svg>
-                            </a>
-                        </th>
+                            {% for intake in intakes %}
+                            <td class="intake-cell p-0 border-b border-gray-100 text-center hover:bg-gray-100 transition-colors duration-150"
+                                data-intake-toggle data-color="{{ intake.color }}">
+                                <label class="flex h-14 w-full cursor-pointer items-center justify-center">
+                                    <input type="checkbox" name="intakes_dish_{{ dish.id }}" value="{{ intake.id }}"
+                                        class="sr-only" {% if intake.id in dish.intake_id_set %}checked{% endif %}>
+                                </label>
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="{{ intakes|length|add:2 }}" class="px-4 py-6 text-center text-gray-500">
+                                No hay recetas disponibles.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
 
-                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
-                            <a href="#" class="flex items-center gap-4">
-                                Merienda
-                                <svg class="h-4 w-4" fill="#ababab" viewBox="0 0 16 16"
-                                    xmlns="http://www.w3.org/2000/svg" stroke="#ababab">
-                                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
-                                    <g id="SVGRepo_iconCarrier">
-                                        <path d="M2 4H0l3-4 3 4H4v12H2V4zm12 8h2l-3 4-3-4h2V0h2v12z"
-                                            fill-rule="evenodd">
-                                        </path>
-                                    </g>
-                                </svg>
-                            </a>
-                        </th>
-
-                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
-                            <a href="#" class="flex items-center gap-4">
-                                1º Plato Cena
-                                <svg class="h-4 w-4" fill="#ababab" viewBox="0 0 16 16"
-                                    xmlns="http://www.w3.org/2000/svg" stroke="#ababab">
-                                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
-                                    <g id="SVGRepo_iconCarrier">
-                                        <path d="M2 4H0l3-4 3 4H4v12H2V4zm12 8h2l-3 4-3-4h2V0h2v12z"
-                                            fill-rule="evenodd">
-                                        </path>
-                                    </g>
-                                </svg>
-                            </a>
-                        </th>
-
-                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
-                            <a href="#" class="flex items-center gap-4">
-                                Plato Principal Cena
-                                <svg class="h-4 w-4" fill="#ababab" viewBox="0 0 16 16"
-                                    xmlns="http://www.w3.org/2000/svg" stroke="#ababab">
-                                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
-                                    <g id="SVGRepo_iconCarrier">
-                                        <path d="M2 4H0l3-4 3 4H4v12H2V4zm12 8h2l-3 4-3-4h2V0h2v12z"
-                                            fill-rule="evenodd">
-                                        </path>
-                                    </g>
-                                </svg>
-                            </a>
-                        </th>
-
-                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
-                            <a href="#" class="flex items-center gap-4">
-                                Recena
-                                <svg class="h-4 w-4" fill="#ababab" viewBox="0 0 16 16"
-                                    xmlns="http://www.w3.org/2000/svg" stroke="#ababab">
-                                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
-                                    <g id="SVGRepo_iconCarrier">
-                                        <path d="M2 4H0l3-4 3 4H4v12H2V4zm12 8h2l-3 4-3-4h2V0h2v12z"
-                                            fill-rule="evenodd">
-                                        </path>
-                                    </g>
-                                </svg>
-                            </a>
-                        </th>
-
-                        <th class="text-left text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
-                            <a href="#" class="flex items-center gap-4">
-                                Otros
-                                <svg class="h-4 w-4" fill="#ababab" viewBox="0 0 16 16"
-                                    xmlns="http://www.w3.org/2000/svg" stroke="#ababab">
-                                    <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-                                    <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
-                                    <g id="SVGRepo_iconCarrier">
-                                        <path d="M2 4H0l3-4 3 4H4v12H2V4zm12 8h2l-3 4-3-4h2V0h2v12z"
-                                            fill-rule="evenodd">
-                                        </path>
-                                    </g>
-                                </svg>
-                            </a>
-                        </th>
-                    </tr>
-                </thead>
-
-                <tbody>
-                    {% for dish in dish_list %}
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-4 py-4 border-b border-gray-100">
-                            <input type="checkbox"
-                                class="rounded border-gray-300 text-secondary focus:ring-secondary/30">
-                        </td>
-
-                        <td class="px-4 py-4 text-gray-700 border-b border-gray-100 font-semibold">
-                            {{ dish.name }}
-                        </td>
-
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="12" class="px-4 py-6 text-center text-gray-500">
-                            No hay recetas disponibles.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        {% if dish_list.paginator.count > 0 %}
+            {% if dish_list.paginator.count > 0 %}
         <div
             class="mt-5 flex flex-col gap-4 border-t border-gray-200 pt-4 md:flex-row md:items-center md:justify-between">
             <p class="text-sm text-gray-600">
@@ -356,8 +227,13 @@
             </div>
         </div>
         {% endif %}
-    </div>
+        </div>
+    </form>
 </div>
 
 
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/dishes.js' %}"></script>
 {% endblock %}
