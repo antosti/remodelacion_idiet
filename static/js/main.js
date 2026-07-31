@@ -12,12 +12,54 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  const confirmModal = document.getElementById("confirmActionModal");
+  const confirmMessage = document.getElementById("confirmActionMessage");
+  const confirmAcceptBtn = document.getElementById("confirmActionAccept");
+  const confirmCancelBtn = document.getElementById("confirmActionCancel");
+  const confirmCloseBtn = document.getElementById("confirmActionClose");
+  const confirmBackdrop = document.getElementById("confirmActionBackdrop");
+  let pendingConfirmAction = null;
+
+  const closeConfirmModal = () => {
+    confirmModal?.classList.add("hidden");
+    pendingConfirmAction = null;
+  };
+
+  const openConfirmModal = (message, onAccept) => {
+    if (!confirmModal || !confirmMessage) {
+      if (window.confirm(message)) onAccept();
+      return;
+    }
+    confirmMessage.textContent = message;
+    pendingConfirmAction = onAccept;
+    confirmModal.classList.remove("hidden");
+  };
+
+  confirmAcceptBtn?.addEventListener("click", () => {
+    const action = pendingConfirmAction;
+    closeConfirmModal();
+    action?.();
+  });
+  confirmCancelBtn?.addEventListener("click", closeConfirmModal);
+  confirmCloseBtn?.addEventListener("click", closeConfirmModal);
+  confirmBackdrop?.addEventListener("click", closeConfirmModal);
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeConfirmModal();
+  });
+
   document.querySelectorAll("[data-confirm]").forEach((element) => {
     const eventName = element.tagName === "FORM" ? "submit" : "click";
     element.addEventListener(eventName, (event) => {
-      if (!window.confirm(element.dataset.confirm)) {
-        event.preventDefault();
-      }
+      event.preventDefault();
+      openConfirmModal(element.dataset.confirm, () => {
+        if (element.tagName === "FORM") {
+          element.submit();
+        } else if (element.tagName === "A") {
+          window.location.href = element.href;
+        } else if (element.form) {
+          element.form.requestSubmit(element);
+        }
+      });
     });
   });
 

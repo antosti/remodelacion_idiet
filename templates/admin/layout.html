@@ -831,6 +831,41 @@
             </footer>
         </div>
     </div>
+
+    <div id="confirmActionModal"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"
+        role="dialog" aria-modal="true" aria-labelledby="confirmActionTitle">
+        <button type="button" id="confirmActionBackdrop"
+            class="absolute inset-0 bg-gray-900/50" aria-label="Cerrar"></button>
+        <div class="relative z-10 w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <div class="mb-5 flex items-start gap-4">
+                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-amber-100">
+                    <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M12 9v3.75m0 3.75h.008v.008H12v-.008ZM10.29 3.86 1.82 18a1.5 1.5 0 0 0 1.28 2.25h17.8a1.5 1.5 0 0 0 1.28-2.25L13.71 3.86a1.5 1.5 0 0 0-2.42 0Z"
+                            stroke="#d97706" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </span>
+                <div class="flex-1 pt-1.5">
+                    <h2 id="confirmActionTitle" class="text-lg font-bold text-gray-800">Confirmar acción</h2>
+                    <p id="confirmActionMessage" class="mt-1 text-sm text-gray-600"></p>
+                </div>
+                <button type="button" id="confirmActionClose"
+                    class="rounded-lg p-2 text-2xl leading-none text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                    aria-label="Cerrar">&times;</button>
+            </div>
+            <div class="flex justify-end gap-3">
+                <button type="button" id="confirmActionCancel"
+                    class="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50">
+                    Cancelar
+                </button>
+                <button type="button" id="confirmActionAccept"
+                    class="rounded-lg bg-idiet px-5 py-2.5 text-sm font-semibold text-white hover:bg-idiet/90">
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 <script src="{% static 'js/main.js' %}"></script>
 <script src="https://unpkg.com/htmx.org@2.0.4"></script>
