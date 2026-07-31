@@ -242,6 +242,10 @@
                                 </svg>
                             </a>
                         </th>
+
+                        <th class="text-center text-sm font-bold text-gray-700 px-4 py-3 border-b border-gray-200">
+                            Acciones
+                        </th>
                     </tr>
                 </thead>
 
@@ -284,6 +288,21 @@
                                 <span class="rounded-md bg-idiet px-2 py-1 text-xs font-semibold text-white">
                                     Recena
                                 </span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4 border-b border-gray-100">
+                            <div class="flex justify-center gap-2">
+                                <a href="{% url 'edit_dish' dish.id %}"
+                                    class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">
+                                    Editar
+                                </a>
+                                <form method="POST" action="{% url 'deactivate_dish' dish.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" data-confirm="¿Desactivar esta receta?"
+                                        class="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700">
+                                        Desactivar
+                                    </button>
+                                </form>
                             </div>
                         </td>
                     </tr>

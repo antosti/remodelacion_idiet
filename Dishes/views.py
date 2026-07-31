@@ -1,4 +1,6 @@
-from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.shortcuts import render, redirect, get_object_or_404
+from django.views.decorators.http import require_POST
 from decimal import Decimal
 from operator import itemgetter
 
@@ -249,3 +251,60 @@ def list_active_dishes(request):
 def list_deactive_dishes(request):
     context = get_dish_context(request, active=False)
     return render(request, 'admin/list_deactive_dishes.html', context)
+
+
+@login_required
+def edit_dish(request, id):
+    dish = get_object_or_404(Dish, id=id, active=True)
+
+    if request.method == 'POST':
+        dish.name = request.POST.get('recipe_name')
+        dish.recipe_elaboration = request.POST.get('description')
+        dish.save()
+        dish.intakes.set(request.POST.getlist('intakes'))
+        messages.success(request, 'La receta se ha actualizado correctamente.')
+        return redirect('list_active_dishes')
+
+    intakes = Intake.objects.all().order_by('order')
+    dish_intake_ids = set(dish.intakes.values_list('id', flat=True))
+    micronutrient_sections = get_micronutrient_sections()
+    nutrition = calculate_dish_nutrition(dish)
+    dish_products = dish.dishproduct_set.select_related('product').all()
+
+    return render(request, 'admin/edit_dish.html', {
+        'dish': dish,
+        'intakes': intakes,
+        'dish_intake_ids': dish_intake_ids,
+        'micronutrient_sections': micronutrient_sections,
+        'nutrition': nutrition,
+        'dish_products': dish_products,
+    })
+
+
+@login_required
+@require_POST
+def deactivate_dish(request, id):
+    dish = get_object_or_404(Dish, id=id, active=True)
+    dish.active = False
+    dish.save(update_fields=['active'])
+    messages.success(request, 'La receta se ha desactivado correctamente.')
+    return redirect('list_active_dishes')
+
+
+@login_required
+@require_POST
+def reactivate_dish(request, id):
+    dish = get_object_or_404(Dish, id=id, active=False)
+    dish.active = True
+    dish.save(update_fields=['active'])
+    messages.success(request, 'La receta se ha reactivado correctamente.')
+    return redirect('list_deactive_dishes')
+
+
+@login_required
+@require_POST
+def delete_dish(request, id):
+    dish = get_object_or_404(Dish, id=id, active=False)
+    dish.delete()
+    messages.success(request, 'La receta se ha eliminado definitivamente.')
+    return redirect('list_deactive_dishes')
