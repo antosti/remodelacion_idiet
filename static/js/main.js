@@ -13,30 +13,61 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   const confirmModal = document.getElementById("confirmActionModal");
+  const confirmTitle = document.getElementById("confirmActionTitle");
   const confirmMessage = document.getElementById("confirmActionMessage");
   const confirmAcceptBtn = document.getElementById("confirmActionAccept");
   const confirmCancelBtn = document.getElementById("confirmActionCancel");
   const confirmCloseBtn = document.getElementById("confirmActionClose");
   const confirmBackdrop = document.getElementById("confirmActionBackdrop");
-  let pendingConfirmAction = null;
+  let pendingAcceptAction = null;
+  let pendingCloseAction = null;
 
   const closeConfirmModal = () => {
     confirmModal?.classList.add("hidden");
-    pendingConfirmAction = null;
+    const onClose = pendingCloseAction;
+    pendingAcceptAction = null;
+    pendingCloseAction = null;
+    onClose?.();
   };
 
-  const openConfirmModal = (message, onAccept) => {
+  const openModal = (mode, message, { title, onAccept, onClose } = {}) => {
     if (!confirmModal || !confirmMessage) {
-      if (window.confirm(message)) onAccept();
+      if (mode === "alert") {
+        window.alert(message);
+        onClose?.();
+      } else if (window.confirm(message)) {
+        onAccept?.();
+      }
       return;
     }
+
     confirmMessage.textContent = message;
-    pendingConfirmAction = onAccept;
+    pendingAcceptAction = onAccept || null;
+    pendingCloseAction = onClose || null;
+
+    if (mode === "alert") {
+      confirmTitle.textContent = title || "Aviso";
+      confirmAcceptBtn.textContent = "Aceptar";
+      confirmCancelBtn?.classList.add("hidden");
+    } else {
+      confirmTitle.textContent = title || "Confirmar acción";
+      confirmAcceptBtn.textContent = "Confirmar";
+      confirmCancelBtn?.classList.remove("hidden");
+    }
+
     confirmModal.classList.remove("hidden");
   };
 
+  const openConfirmModal = (message, onAccept) => {
+    openModal("confirm", message, { onAccept });
+  };
+
+  window.showAlertModal = (message, onClose) => {
+    openModal("alert", message, { onClose });
+  };
+
   confirmAcceptBtn?.addEventListener("click", () => {
-    const action = pendingConfirmAction;
+    const action = pendingAcceptAction;
     closeConfirmModal();
     action?.();
   });

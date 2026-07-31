@@ -173,8 +173,7 @@ if (appointmentForm && clientIdInput) {
     appointmentForm.addEventListener('submit', (event) => {
         if (!clientIdInput.value) {
             event.preventDefault()
-            alert('Selecciona un cliente válido de la lista.')
-            clientSearchInput?.focus()
+            window.showAlertModal('Selecciona un cliente válido de la lista.', () => clientSearchInput?.focus())
         }
     })
 }
@@ -184,8 +183,7 @@ if (editAppointmentForm && editClientIdInput) {
     editAppointmentForm.addEventListener('submit', (event) => {
         if (!editClientIdInput.value) {
             event.preventDefault()
-            alert('Selecciona un cliente válido de la lista.')
-            editClientSearchInput?.focus()
+            window.showAlertModal('Selecciona un cliente válido de la lista.', () => editClientSearchInput?.focus())
         }
     })
 }
