@@ -2,6 +2,7 @@ import json
 from django.contrib import messages
 
 from django.conf import settings
+from django.contrib.auth.decorators import login_required
 from django.core.serializers.json import DjangoJSONEncoder
 from django.shortcuts import render, redirect
 from django.utils import timezone
@@ -13,6 +14,7 @@ from idiet.views import paginate_queryset
 
 # Create your views here.
 
+@login_required
 def appointments_view(request):
     per_page = int(request.GET.get("per_page", 10))
     sort = request.GET.get('sort', 'name').strip()
@@ -93,6 +95,7 @@ def appointments_view(request):
     })
 
 
+@login_required
 def create_appointment_view(request):
     if request.method != 'POST':
         return redirect('appointments')
@@ -144,6 +147,7 @@ def create_appointment_view(request):
     return redirect('appointments')
 
 
+@login_required
 def update_appointment(request, id):
     appointment = Appointment.objects.get(pk=id)
 
@@ -191,6 +195,7 @@ def update_appointment(request, id):
     return redirect('appointments')
 
 
+@login_required
 def deactivated_appointments_view(request):
     per_page = int(request.GET.get("per_page", 10))
     sort = request.GET.get('sort', 'name').strip()
@@ -231,6 +236,7 @@ def deactivated_appointments_view(request):
     })
 
 
+@login_required
 def deactivate_appointment(request, id):
     try:
         appointment = Appointment.objects.get(pk=id, user_id=request.user.id)
@@ -243,6 +249,7 @@ def deactivate_appointment(request, id):
     return redirect('appointments')
 
 
+@login_required
 def reactivate_appointment(request, id):
     if request.method != 'POST':
         return redirect('deactivated_appointments')
@@ -258,6 +265,7 @@ def reactivate_appointment(request, id):
     return redirect('deactivated_appointments')
 
 
+@login_required
 def delete_appointment(request, id):
     if request.method != 'POST':
         return redirect('deactivated_appointments')
@@ -272,6 +280,7 @@ def delete_appointment(request, id):
     return redirect('deactivated_appointments')
 
 
+@login_required
 def reactivate_appointments_bulk(request):
     if request.method != 'POST':
         return redirect('deactivated_appointments')
@@ -301,6 +310,7 @@ def reactivate_appointments_bulk(request):
     return redirect('deactivated_appointments')
 
 
+@login_required
 def delete_appointments_bulk(request):
     if request.method != 'POST':
         return redirect('deactivated_appointments')
@@ -330,6 +340,7 @@ def delete_appointments_bulk(request):
     return redirect('deactivated_appointments')
 
 
+@login_required
 def deactivate_appointments_bulk(request):
     if request.method != 'POST':
         return redirect('appointments')
