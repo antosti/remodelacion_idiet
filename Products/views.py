@@ -3,6 +3,7 @@ from decimal import Decimal, InvalidOperation
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from FoodGroup.models import FoodGroup
@@ -49,7 +50,7 @@ def get_micronutrient_unit(micronutrient_id):
     return 'mg'
 
 
-def get_food_micronutrient_sections():
+def get_food_micronutrient_sections(product=None):
     all_ids = []
 
     for section in FOOD_MICRONUTRIENT_SECTIONS:
@@ -61,6 +62,14 @@ def get_food_micronutrient_sections():
         micronutrient.id: micronutrient
         for micronutrient in micronutrients
     }
+
+    existing_values = {}
+
+    if product is not None:
+        existing_values = {
+            product_micronutrient.micronutrient_id: product_micronutrient.value
+            for product_micronutrient in ProductMicronutrient.objects.filter(product=product)
+        }
 
     sections = []
 
@@ -75,6 +84,7 @@ def get_food_micronutrient_sections():
 
             micronutrient.unit = get_micronutrient_unit(micronutrient.id)
             micronutrient.input_name = f'micronutrient_{micronutrient.id}'
+            micronutrient.value = existing_values.get(micronutrient.id, Decimal('0.00'))
 
             section_micronutrients.append(micronutrient)
 
@@ -151,6 +161,86 @@ def create_food(request):
         'food_groups': food_groups,
         'super_groups': super_groups,
         'micronutrient_sections': micronutrient_sections,
+    })
+
+
+@login_required
+def edit_food(request, id):
+    product = get_object_or_404(Product, id=id, is_active=True)
+    food_groups = FoodGroup.objects.all()
+    super_groups = SuperGroup.objects.all()
+
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        english_name = request.POST.get('english_name', '').strip()
+        super_group_ids = request.POST.getlist('super_group')
+        micronutrient_sections = get_food_micronutrient_sections()
+
+        with transaction.atomic():
+            product.food_name = name
+            product.food_name_spanish = name
+            product.food_name_eng = english_name or name
+            product.origin_db = 'Editado'
+            product.kcal_100g = get_decimal_value(request, 'kcal_100g')
+            product.prot_g = get_decimal_value(request, 'proteins')
+            product.ch_g = get_decimal_value(request, 'hydrates')
+            product.fat_g = get_decimal_value(request, 'fats')
+            product.food_group_id = request.POST.get('food_group') or None
+            product.save()
+
+            product.super_groups.set(super_group_ids)
+
+            for section in micronutrient_sections:
+                for micronutrient in section['micronutrients']:
+                    value = get_decimal_value(request, micronutrient.input_name)
+
+                    if value == Decimal('0.00'):
+                        ProductMicronutrient.objects.filter(
+                            product=product,
+                            micronutrient=micronutrient,
+                        ).delete()
+                        continue
+
+                    ProductMicronutrient.objects.update_or_create(
+                        product=product,
+                        micronutrient=micronutrient,
+                        defaults={'value': value},
+                    )
+
+        messages.success(request, 'Alimento actualizado correctamente')
+        return redirect('list_active_foods')
+
+    return render(request, 'admin/edit_food.html', {
+        'product': product,
+        'food_groups': food_groups,
+        'super_groups': super_groups,
+        'selected_super_group_ids': set(product.super_groups.values_list('id', flat=True)),
+        'micronutrient_sections': get_food_micronutrient_sections(product),
+    })
+
+
+@login_required
+def search_products(request):
+    query = request.GET.get('q', '').strip()
+    products = Product.objects.filter(is_active=True)
+
+    if query:
+        products = products.filter(food_name_spanish__icontains=query)
+
+    products = products.order_by('food_name_spanish')[:20]
+
+    return JsonResponse({
+        'results': [
+            {
+                'id': product.id,
+                'name': product.food_name_spanish,
+                'kcal_100g': float(product.kcal_100g),
+                'ch_g': float(product.ch_g),
+                'prot_g': float(product.prot_g),
+                'fat_g': float(product.fat_g),
+            }
+            for product in products
+        ]
     })
 
 

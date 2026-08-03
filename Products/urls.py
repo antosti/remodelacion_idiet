@@ -10,5 +10,7 @@ urlpatterns = [
     path('foods/reactivate-bulk/', views.reactivate_foods_bulk, name='reactivate_foods_bulk'),
     path('foods/<int:id>/delete/', views.delete_food, name='delete_food'),
     path('foods/delete-bulk/', views.delete_foods_bulk, name='delete_foods_bulk'),
+    path('foods/<int:id>/edit/', views.edit_food, name='edit_food'),
     path('create-food/', views.create_food, name='create_food'),
+    path('products/search/', views.search_products, name='search_products'),
 ]

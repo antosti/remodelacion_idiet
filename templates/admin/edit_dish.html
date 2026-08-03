@@ -2,6 +2,11 @@
 {% block title %} Editar receta {% endblock %}
 {% load static %}
 
+{% block extra_js %}
+{{ existing_ingredients|json_script:"existing-ingredients" }}
+<script src="{% static 'js/dish_ingredients.js' %}"></script>
+{% endblock %}
+
 {% block content %}
 <div class="w-full p-4 sm:p-6 bg-gray-50 rounded-2xl">
     <div class="flex flex-col gap-2 px-2 mb-6 sm:flex-row sm:items-center sm:justify-between">
@@ -91,9 +96,21 @@
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
             <!-- Columna izquierda -->
-            <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm h-full flex flex-col">
+            <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm h-full flex flex-col"
+                data-ingredients-app data-search-url="{% url 'search_products' %}">
                 <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-5">
                     <h2 class="text-lg font-semibold text-gray-700">Ingredientes</h2>
+                </div>
+
+                <div class="relative mb-4">
+                    <label class="block mb-1 text-sm font-semibold text-gray-700">Búsqueda rápida:</label>
+                    <input type="text" id="ingredientSearchInput" autocomplete="off"
+                        placeholder="Buscar alimento para añadir..."
+                        class="border rounded-lg px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-secondary/30">
+
+                    <div id="ingredientSearchResults"
+                        class="hidden absolute z-10 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-56 overflow-y-auto">
+                    </div>
                 </div>
 
                 <div class="overflow-x-auto flex-1">
@@ -101,31 +118,13 @@
                         <thead>
                             <tr class="border-b border-gray-200">
                                 <th class="px-4 py-3 text-left text-sm font-bold text-gray-700">Alimento</th>
-                                <th class="px-4 py-3 text-left text-sm font-bold text-gray-700">Cantidad</th>
+                                <th class="px-4 py-3 text-left text-sm font-bold text-gray-700">Cantidad (g)</th>
                                 <th class="px-4 py-3 text-left text-sm font-bold text-gray-700">Kcal / 100g</th>
+                                <th class="px-4 py-3 text-right text-sm font-bold text-gray-700"></th>
                             </tr>
                         </thead>
 
-                        <tbody>
-                            {% for dish_product in dish_products %}
-                            <tr class="hover:bg-gray-50">
-                                <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
-                                    {{ dish_product.product.name }}
-                                </td>
-                                <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
-                                    {{ dish_product.quantity }}
-                                </td>
-                                <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
-                                    {{ dish_product.product.kcal_100g }}
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="3" class="px-4 py-6 text-center text-sm text-gray-500 border-b border-gray-100">
-                                    Esta receta no tiene ingredientes registrados.
-                                </td>
-                            </tr>
-                            {% endfor %}
+                        <tbody id="ingredientsTableBody">
                         </tbody>
                     </table>
                 </div>
@@ -139,14 +138,14 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block mb-1 text-sm font-semibold text-gray-700">Kcal / 100g</label>
-                            <input type="number" step="0.01" value="{{ nutrition.kcal_100g }}" readonly
+                            <input type="number" step="0.01" id="dishKcalField" value="{{ nutrition.kcal_100g }}" readonly
                                 class="w-full border rounded-lg px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none">
                         </div>
 
                         <div>
                             <label class="block mb-1 text-sm font-semibold text-gray-700">Hidratos (%)</label>
                             <div class="flex">
-                                <input type="number" step="0.01" value="{{ nutrition.carbs_100g }}" readonly
+                                <input type="number" step="0.01" id="dishCarbsField" value="{{ nutrition.carbs_100g }}" readonly
                                     class="w-full border rounded-l-lg px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none">
                                 <span
                                     class="flex items-center border border-l-0 rounded-r-lg px-3 text-gray-500 bg-gray-50">%</span>
@@ -156,7 +155,7 @@
                         <div>
                             <label class="block mb-1 text-sm font-semibold text-gray-700">Proteínas (%)</label>
                             <div class="flex">
-                                <input type="number" step="0.01" value="{{ nutrition.protein_100g }}" readonly
+                                <input type="number" step="0.01" id="dishProteinField" value="{{ nutrition.protein_100g }}" readonly
                                     class="w-full border rounded-l-lg px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none">
                                 <span
                                     class="flex items-center border border-l-0 rounded-r-lg px-3 text-gray-500 bg-gray-50">%</span>
@@ -166,7 +165,7 @@
                         <div>
                             <label class="block mb-1 text-sm font-semibold text-gray-700">Grasa (%)</label>
                             <div class="flex">
-                                <input type="number" step="0.01" value="{{ nutrition.fat_100g }}" readonly
+                                <input type="number" step="0.01" id="dishFatField" value="{{ nutrition.fat_100g }}" readonly
                                     class="w-full border rounded-l-lg px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none">
                                 <span
                                     class="flex items-center border border-l-0 rounded-r-lg px-3 text-gray-500 bg-gray-50">%</span>

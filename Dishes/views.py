@@ -1,15 +1,53 @@
 from django.contrib import messages
+from django.db import transaction
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.decorators.http import require_POST
 from decimal import Decimal
 from operator import itemgetter
 
 from Intakes.models import Intake
-from Dishes.models import Dish
+from Dishes.models import Dish, DishProduct
 from Micronutrients.models import Micronutrient
 from Products.models import Product
 from idiet.views import paginate_queryset
 from django.contrib.auth.decorators import login_required
+
+
+def get_dish_ingredient_pairs(request):
+    product_ids = request.POST.getlist('ingredient_product_id')
+    quantities = request.POST.getlist('ingredient_quantity')
+
+    pairs = []
+
+    for product_id, quantity in zip(product_ids, quantities):
+        if not product_id:
+            continue
+
+        try:
+            quantity = int(quantity)
+        except (TypeError, ValueError):
+            continue
+
+        if quantity <= 0:
+            continue
+
+        pairs.append((product_id, quantity))
+
+    if not pairs:
+        return []
+
+    valid_product_ids = set(
+        Product.objects.filter(
+            id__in=[product_id for product_id, _ in pairs],
+            is_active=True,
+        ).values_list('id', flat=True)
+    )
+
+    return [
+        (product_id, quantity)
+        for product_id, quantity in pairs
+        if int(product_id) in valid_product_ids
+    ]
 
 
 MICRONUTRIENT_SECTIONS = [
@@ -80,13 +118,19 @@ def create_dish(request):
     micronutrient_sections = get_micronutrient_sections()
 
     if request.method == 'POST':
-        dish = Dish.objects.create(
-            name=request.POST.get('recipe_name'),
-            recipe_elaboration=request.POST.get('description'),
-            language='es',
-        )
+        ingredient_pairs = get_dish_ingredient_pairs(request)
 
-        dish.intakes.set(request.POST.getlist('intakes'))
+        with transaction.atomic():
+            dish = Dish.objects.create(
+                name=request.POST.get('recipe_name'),
+                recipe_elaboration=request.POST.get('description'),
+                language='es',
+            )
+
+            dish.intakes.set(request.POST.getlist('intakes'))
+
+            for product_id, quantity in ingredient_pairs:
+                DishProduct.objects.create(dish=dish, product_id=product_id, quantity=quantity)
 
         return redirect('create_dish')
 
@@ -258,10 +302,19 @@ def edit_dish(request, id):
     dish = get_object_or_404(Dish, id=id, active=True)
 
     if request.method == 'POST':
-        dish.name = request.POST.get('recipe_name')
-        dish.recipe_elaboration = request.POST.get('description')
-        dish.save()
-        dish.intakes.set(request.POST.getlist('intakes'))
+        ingredient_pairs = get_dish_ingredient_pairs(request)
+
+        with transaction.atomic():
+            dish.name = request.POST.get('recipe_name')
+            dish.recipe_elaboration = request.POST.get('description')
+            dish.save()
+            dish.intakes.set(request.POST.getlist('intakes'))
+
+            dish.dishproduct_set.all().delete()
+
+            for product_id, quantity in ingredient_pairs:
+                DishProduct.objects.create(dish=dish, product_id=product_id, quantity=quantity)
+
         messages.success(request, 'La receta se ha actualizado correctamente.')
         return redirect('list_active_dishes')
 
@@ -271,6 +324,19 @@ def edit_dish(request, id):
     nutrition = calculate_dish_nutrition(dish)
     dish_products = dish.dishproduct_set.select_related('product').all()
 
+    existing_ingredients = [
+        {
+            'id': dish_product.product.id,
+            'name': dish_product.product.food_name_spanish,
+            'kcal_100g': float(dish_product.product.kcal_100g),
+            'ch_g': float(dish_product.product.ch_g),
+            'prot_g': float(dish_product.product.prot_g),
+            'fat_g': float(dish_product.product.fat_g),
+            'quantity': dish_product.quantity,
+        }
+        for dish_product in dish_products
+    ]
+
     return render(request, 'admin/edit_dish.html', {
         'dish': dish,
         'intakes': intakes,
@@ -278,6 +344,7 @@ def edit_dish(request, id):
         'micronutrient_sections': micronutrient_sections,
         'nutrition': nutrition,
         'dish_products': dish_products,
+        'existing_ingredients': existing_ingredients,
     })
 
 

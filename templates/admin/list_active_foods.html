@@ -252,14 +252,21 @@
                             {{ product.origin_db }}
                         </td>
                         <td class="px-4 py-4 border-b border-gray-100">
-                            <form method="POST" action="{% url 'deactivate_food' product.id %}"
-                                data-confirm="¿Desactivar este alimento?">
-                                {% csrf_token %}
-                                <button type="submit"
-                                    class="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700 transition">
-                                    Desactivar
-                                </button>
-                            </form>
+                            <div class="flex items-center gap-2">
+                                <a href="{% url 'edit_food' product.id %}"
+                                    class="rounded-lg bg-secondary px-3 py-2 text-sm font-semibold text-white hover:bg-secondary/90 transition">
+                                    Editar
+                                </a>
+
+                                <form method="POST" action="{% url 'deactivate_food' product.id %}"
+                                    data-confirm="¿Desactivar este alimento?">
+                                    {% csrf_token %}
+                                    <button type="submit"
+                                        class="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700 transition">
+                                        Desactivar
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                     {% empty %}
