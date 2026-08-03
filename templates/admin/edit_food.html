@@ -1,6 +1,7 @@
 {% extends 'admin/layout.html' %}
 {% block title %} Editar alimento {% endblock %}
 {% load static %}
+{% load l10n %}
 
 {% block content %}
 <div class="w-full p-4 sm:p-6 bg-gray-50 rounded-2xl">
@@ -27,7 +28,7 @@
                 <div>
                     <label class="block mb-1 text-sm font-semibold text-gray-700">Kcal /
                         100g</label>
-                    <input type="number" step="0.01" name="kcal_100g" value="{{ product.kcal_100g }}" placeholder="0"
+                    <input type="number" step="0.01" name="kcal_100g" value="{{ product.kcal_100g|unlocalize }}" placeholder="0"
                         class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
                 </div>
 
@@ -45,7 +46,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block mb-1 text-sm font-semibold text-gray-700">Hidratos</label>
-                        <input type="number" step="0.01" name="hydrates" value="{{ product.ch_g }}" placeholder="0"
+                        <input type="number" step="0.01" name="hydrates" value="{{ product.ch_g|unlocalize }}" placeholder="0"
                             class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
                     </div>
                     <div>
@@ -58,7 +59,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block mb-1 text-sm font-semibold text-gray-700">Proteínas</label>
-                        <input type="number" step="0.01" name="proteins" value="{{ product.prot_g }}" placeholder="0"
+                        <input type="number" step="0.01" name="proteins" value="{{ product.prot_g|unlocalize }}" placeholder="0"
                             class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
                     </div>
                     <div>
@@ -71,7 +72,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block mb-1 text-sm font-semibold text-gray-700">Grasas</label>
-                        <input type="number" step="0.01" name="fats" value="{{ product.fat_g }}" placeholder="0"
+                        <input type="number" step="0.01" name="fats" value="{{ product.fat_g|unlocalize }}" placeholder="0"
                             class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
                     </div>
                     <div>
@@ -139,7 +140,7 @@
                             <label class="block mb-1 text-sm font-semibold text-gray-700">
                                 {{ micronutrient.name }} ({{ micronutrient.unit }})
                             </label>
-                            <input type="number" step="0.01" name="{{ micronutrient.input_name }}" value="{{ micronutrient.value }}"
+                            <input type="number" step="0.01" name="{{ micronutrient.input_name }}" value="{{ micronutrient.value|unlocalize }}"
                                 class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
                         </div>
                         {% endfor %}
@@ -159,7 +160,7 @@
                             <label class="block mb-1 text-sm font-semibold text-gray-700">
                                 {{ micronutrient.name }} ({{ micronutrient.unit }})
                             </label>
-                            <input type="number" step="0.01" name="{{ micronutrient.input_name }}" value="{{ micronutrient.value }}"
+                            <input type="number" step="0.01" name="{{ micronutrient.input_name }}" value="{{ micronutrient.value|unlocalize }}"
                                 class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-secondary/30">
                         </div>
                         {% endfor %}
