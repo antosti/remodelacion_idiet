@@ -192,8 +192,11 @@
                         <td class="px-4 py-4 border-b border-gray-100">
                             <input type="checkbox" class="client-checkbox rounded border-gray-300 text-secondary focus:ring-secondary/30" data-client-id="{{ client.id }}">
                         </td>
-                        <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
-                            {{ client.dni }}
+                        <td class="px-4 py-4 border-b border-gray-100">
+                            <a href="{% url 'client_detail' client.id %}"
+                                class="font-semibold text-secondary hover:underline">
+                                {{ client.dni }}
+                            </a>
                         </td>
                         <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
                             {{ client.first_name }}

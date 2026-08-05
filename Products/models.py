@@ -43,13 +43,13 @@ class ProductMicronutrient(models.Model):
 
 
 class ProductExcluded(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    client = models.ForeignKey('Clients.Client', on_delete=models.CASCADE, related_name='excluded_products')
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     date_added = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'product_excluded'
-        unique_together = ('user', 'product')
+        unique_together = ('client', 'product')
 
 class ProductInactive(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

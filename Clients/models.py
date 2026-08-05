@@ -32,6 +32,9 @@ class Client(models.Model):
     city = models.CharField(max_length=50)
     activity_level = models.CharField(max_length=20, choices=ACTIVITY_LEVELS_CHOICES)
     status = models.BooleanField(default=True)
+    metabolismo_basal = models.DecimalField(max_digits=7, decimal_places=2, null=True, blank=True)
+    gasto_energetico = models.DecimalField(max_digits=7, decimal_places=2, null=True, blank=True)
+    imc = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     
     class Meta:
         db_table = 'client'

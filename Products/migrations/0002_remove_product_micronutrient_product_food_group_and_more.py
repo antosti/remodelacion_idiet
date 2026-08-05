@@ -33,18 +33,31 @@ class Migration(migrations.Migration):
             name='super_groups',
             field=models.ManyToManyField(blank=True, to='SuperGroup.supergroup'),
         ),
-        migrations.CreateModel(
-            name='ProductMicronutrient',
-            fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('value', models.DecimalField(decimal_places=2, default=0.0, max_digits=10)),
-                ('micronutrient', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='Micronutrients.micronutrient')),
-                ('product', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='Products.product')),
+        # El M2M implícito de 0001 ya creó la tabla 'product_micronutrient'
+        # (id, product_id, micronutrient_id). Se reutiliza esa tabla en vez
+        # de recrearla, añadiendo solo la columna 'value' que falta.
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.CreateModel(
+                    name='ProductMicronutrient',
+                    fields=[
+                        ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                        ('value', models.DecimalField(decimal_places=2, default=0.0, max_digits=10)),
+                        ('micronutrient', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='Micronutrients.micronutrient')),
+                        ('product', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='Products.product')),
+                    ],
+                    options={
+                        'db_table': 'product_micronutrient',
+                        'unique_together': {('product', 'micronutrient')},
+                    },
+                ),
             ],
-            options={
-                'db_table': 'product_micronutrient',
-                'unique_together': {('product', 'micronutrient')},
-            },
+            database_operations=[
+                migrations.RunSQL(
+                    sql="ALTER TABLE product_micronutrient ADD COLUMN value NUMERIC(10, 2) NOT NULL DEFAULT 0.0",
+                    reverse_sql="ALTER TABLE product_micronutrient DROP COLUMN value",
+                ),
+            ],
         ),
         migrations.AddField(
             model_name='product',
