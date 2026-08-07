@@ -19,6 +19,7 @@ class Product(models.Model):
     food_group = models.ForeignKey(FoodGroup, on_delete=models.SET_NULL, null=True, blank=True)
     super_groups = models.ManyToManyField(SuperGroup, blank=True)
     is_active = models.BooleanField(default=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
 
     # Many to many relationship with Micronutrient
     micronutrients = models.ManyToManyField(
