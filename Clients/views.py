@@ -4,7 +4,7 @@ from django.db import IntegrityError
 
 from django.shortcuts import render, redirect, get_object_or_404
 from Users.models import User
-from Clients.models import Client
+from Clients.models import Client, ClientMeasurementHistory
 from FoodGroup.models import FoodGroup, FoodGroupExcluded
 from Products.models import ProductExcluded
 from idiet.views import paginate_queryset
@@ -15,6 +15,22 @@ def normalize_decimal(value):
     if value is None:
         return value
     return value.replace(',', '.')
+
+
+def record_measurement_history(client):
+    current_values = {
+        'height': client.height,
+        'weight': client.weight,
+        'metabolismo_basal': client.metabolismo_basal,
+        'gasto_energetico': client.gasto_energetico,
+        'imc': client.imc,
+    }
+
+    last_entry = ClientMeasurementHistory.objects.filter(client=client).order_by('-updated_at').first()
+    if last_entry and all(getattr(last_entry, field) == value for field, value in current_values.items()):
+        return
+
+    ClientMeasurementHistory.objects.create(client=client, **current_values)
 
 
 def sync_excluded_products(client, product_ids):
@@ -90,6 +106,7 @@ def create_client(request):
 
         sync_excluded_products(client, request.POST.getlist('excluded_products'))
         sync_excluded_food_groups(client, request.POST.getlist('excluded_food_groups'))
+        record_measurement_history(client)
         messages.success(request, "Cliente creado correctamente")
 
         return redirect('create_client')
@@ -131,6 +148,7 @@ def client_detail(request, id):
 
         sync_excluded_products(client, request.POST.getlist('excluded_products'))
         sync_excluded_food_groups(client, request.POST.getlist('excluded_food_groups'))
+        record_measurement_history(client)
 
         messages.success(request, 'Cliente actualizado correctamente')
         return redirect('client_detail', id=client.id)

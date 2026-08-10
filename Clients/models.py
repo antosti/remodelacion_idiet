@@ -38,4 +38,18 @@ class Client(models.Model):
     
     class Meta:
         db_table = 'client'
-    
+
+
+class ClientMeasurementHistory(models.Model):
+
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='measurement_history')
+    height = models.IntegerField(null=True, blank=True)
+    weight = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    metabolismo_basal = models.DecimalField(max_digits=7, decimal_places=2, null=True, blank=True)
+    gasto_energetico = models.DecimalField(max_digits=7, decimal_places=2, null=True, blank=True)
+    imc = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'client_measurement_history'
+        ordering = ['-updated_at']
