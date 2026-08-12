@@ -1,4 +1,5 @@
 import json
+import logging
 from django.contrib import messages
 
 from django.conf import settings
@@ -11,6 +12,8 @@ from datetime import datetime, timedelta
 from Appointments.models import Appointment
 from Clients.models import Client
 from idiet.views import paginate_queryset
+
+logger = logging.getLogger('idiet.appointments')
 
 # Create your views here.
 
@@ -305,6 +308,7 @@ def reactivate_appointments_bulk(request):
         else:
             messages.error(request, 'No se encontraron citas para reactivar.')
     except Exception:
+        logger.exception('Error al reactivar citas en bloque (ids=%s)', appointment_ids)
         messages.error(request, 'Error al reactivar las citas.')
 
     return redirect('deactivated_appointments')
@@ -335,6 +339,7 @@ def delete_appointments_bulk(request):
         else:
             messages.error(request, 'No se encontraron citas para eliminar.')
     except Exception:
+        logger.exception('Error al eliminar citas en bloque (ids=%s)', appointment_ids)
         messages.error(request, 'Error al eliminar las citas.')
 
     return redirect('deactivated_appointments')
@@ -363,7 +368,8 @@ def deactivate_appointments_bulk(request):
             messages.success(request, f'{count} cita(s) desactivada(s) correctamente.')
         else:
             messages.error(request, 'No se encontraron citas para desactivar.')
-    except Exception as e:
+    except Exception:
+        logger.exception('Error al desactivar citas en bloque (ids=%s)', appointment_ids)
         messages.error(request, 'Error al desactivar las citas.')
-    
+
     return redirect('appointments')

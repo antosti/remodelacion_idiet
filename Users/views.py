@@ -1,3 +1,4 @@
+import logging
 from django.shortcuts import render
 from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import render, redirect
@@ -13,6 +14,8 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from idiet.db_context import ALLOWED_DATABASE_ALIASES, use_database
 from Users.models import User
+
+logger = logging.getLogger('idiet.users')
 
 
 def normalize_environment(user_type):
@@ -53,9 +56,11 @@ def login_view(request):
                 request.session["database_environment"] = database_alias
                 request.database_alias = database_alias
                 login(request, user)
+                logger.info("Login correcto: email=%s entorno=%s", email, selected_environment)
                 messages.success(request, "Inicio de sesión correcto")
                 return redirect("admin-home")
 
+        logger.warning("Login fallido: email=%s entorno=%s", email, selected_environment)
         messages.error(request, "Email o contraseña incorrectos")
 
     return render(
@@ -95,6 +100,12 @@ def password_reset_request(request):
                     recipient_list=[user.email],
                     html_message=html_message,
                 )
+                logger.info("Enlace de recuperación enviado: email=%s entorno=%s", email, selected_environment)
+            else:
+                logger.warning(
+                    "Solicitud de recuperación para email no registrado: email=%s entorno=%s",
+                    email, selected_environment,
+                )
 
         messages.success(
             request,
@@ -129,6 +140,7 @@ def password_reset_confirm(request, uidb64, token):
                 user = candidate
 
     if user is None:
+        logger.warning("Enlace de recuperación inválido o caducado: uidb64=%s", uidb64)
         return render(request, "password_reset_confirm.html", {"valid_link": False})
 
     if request.method == "POST":
@@ -158,6 +170,7 @@ def password_reset_confirm(request, uidb64, token):
             user.set_password(password1)
             user.save()
 
+        logger.info("Contraseña restablecida correctamente: user_id=%s entorno=%s", user.pk, alias)
         messages.success(request, "Tu contraseña se ha actualizado correctamente. Ya puedes iniciar sesión.")
         return redirect("login")
 

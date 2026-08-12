@@ -32,17 +32,6 @@ urlpatterns = [
     path('', include('Intakes.urls')),
     path('', include('Plantillas.urls')),
     path('', include('Appointments.urls')),
-    # path('about/',),
-    # path('users/', include('Users.urls')),
-    # path('clients/', include('Clients.urls')),
-    # path('products/', include('Products.urls')),
-    # path('dishes/', include('Dishes.urls')),
-    # path('menus/', include('Menus.urls')),
-    # path('intakes/', include('Intakes.urls')),
-    # path('appointments/', include('Appointments.urls')),
-    # path('allergens/', include('Allergens.urls')),
-    # path('micronutrients/', include('Micronutrients.urls')),
-    # path('plantillas/', include('Plantillas.urls')),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

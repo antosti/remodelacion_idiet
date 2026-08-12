@@ -3,5 +3,6 @@ venv/
 .env
 node_modules/
 *.log
+logs/
 static/dist/style.css
 AGENTS.md
