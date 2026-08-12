@@ -7,7 +7,8 @@
 <div class="w-full p-6 bg-gray-50 rounded-2xl">
     <div class="flex flex-row justify-between items-center px-2 mb-6">
         <h1 class="text-2xl font-bold text-gray-700">Ficha de cliente</h1>
-        <button class="h-10 flex items-center gap-2 px-3 py-1 border rounded-lg bg-idiet text-white text-sm">
+        <a href="{% url 'client_measurement_history' client.id %}"
+            class="h-10 flex items-center gap-2 px-3 py-1 border rounded-lg bg-idiet text-white text-sm">
             <h3 class="font-semibold">Mediciones del cliente</h3>
             <svg class="w-4 h-4" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="#000000">
                 <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
@@ -18,7 +19,7 @@
                     </path>
                 </g>
             </svg>
-        </button>
+        </a>
     </div>
 
     <form method="POST" class="space-y-6">

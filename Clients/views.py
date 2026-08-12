@@ -171,6 +171,29 @@ def client_detail(request, id):
     })
 
 @login_required
+def client_measurement_history(request, id):
+    client = get_object_or_404(Client, id=id)
+
+    history = ClientMeasurementHistory.objects.filter(client=client).order_by('updated_at')
+    measurement_history_data = [
+        {
+            'date': entry.updated_at.strftime('%d/%m/%Y'),
+            'height': entry.height,
+            'weight': float(entry.weight) if entry.weight is not None else None,
+            'metabolismo_basal': float(entry.metabolismo_basal) if entry.metabolismo_basal is not None else None,
+            'gasto_energetico': float(entry.gasto_energetico) if entry.gasto_energetico is not None else None,
+            'imc': float(entry.imc) if entry.imc is not None else None,
+        }
+        for entry in history
+    ]
+
+    return render(request, 'admin/client_measurement_history.html', {
+        'client': client,
+        'measurement_history_data': measurement_history_data,
+    })
+
+
+@login_required
 def get_clients_list_context(request, clients):
     first_name = request.GET.get('first_name', '').strip()
     last_name = request.GET.get('last_name', '').strip()

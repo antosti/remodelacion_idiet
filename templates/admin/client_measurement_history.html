@@ -1,0 +1,60 @@
+{% extends 'admin/layout.html' %}
+{% block title %} Histórico de mediciones {% endblock %}
+{% load static %}
+
+{% block content %}
+<div class="w-full p-6 bg-gray-50 rounded-2xl">
+    <div class="flex flex-row justify-between items-center px-2 mb-6">
+        <h1 class="text-2xl font-bold text-gray-700">
+            Histórico de mediciones — {{ client.first_name }} {{ client.last_name }}
+        </h1>
+    </div>
+
+    {{ measurement_history_data|json_script:"measurement-history-data" }}
+
+    {% if measurement_history_data %}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+            <h2 class="text-lg font-semibold mb-4 text-gray-700">Peso (kg)</h2>
+            <canvas id="weightChart"></canvas>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+            <h2 class="text-lg font-semibold mb-4 text-gray-700">Altura (cm)</h2>
+            <canvas id="heightChart"></canvas>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+            <h2 class="text-lg font-semibold mb-4 text-gray-700">IMC</h2>
+            <canvas id="imcChart"></canvas>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+            <h2 class="text-lg font-semibold mb-4 text-gray-700">Metabolismo basal</h2>
+            <canvas id="metabolismoBasalChart"></canvas>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+            <h2 class="text-lg font-semibold mb-4 text-gray-700">Gasto energético</h2>
+            <canvas id="gastoEnergeticoChart"></canvas>
+        </div>
+    </div>
+    {% else %}
+    <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+        <p class="px-3 py-2 text-sm text-gray-400">Este cliente todavía no tiene mediciones registradas.</p>
+    </div>
+    {% endif %}
+
+    <div class="flex justify-start pt-6">
+        <a href="{% url 'client_detail' client.id %}"
+            class="w-85 px-4 py-2 border rounded-lg bg-red-500 text-white flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-red-300">
+            Atrás
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/chart.js@4"></script>
+<script src="{% static 'js/client_measurement_history.js' %}"></script>
+{% endblock %}
