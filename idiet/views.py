@@ -7,6 +7,7 @@ from Appointments.models import Appointment
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from idiet.permissions import scoped_queryset
 
 
 def home_page(request):
@@ -14,22 +15,25 @@ def home_page(request):
 
 @login_required
 def admin_home(request):
+    clients_qs = scoped_queryset(Client.objects.all(), request.user)
+    appointments_qs = scoped_queryset(Appointment.objects.all(), request.user)
+
     # Dashboard counters
-    client = Client.objects.all().count()
+    client = clients_qs.count()
     dish = Dish.objects.all().count()
     product = Product.objects.all().count()
     menu = Menu.objects.all().count()
-    appointment = Appointment.objects.all().count()
+    appointment = appointments_qs.count()
 
-    recent_appointment = Appointment.objects.order_by('-id').first()
+    recent_appointment = appointments_qs.order_by('-id').first()
 
     # Get today's first 3 appointments with related client data
     today = timezone.localdate()
-    agenda_client = Appointment.objects.select_related('client').filter(
+    agenda_client = appointments_qs.select_related('client').filter(
         start_date__date=today
     ).order_by('start_date')[:3]
 
-    new_client = Client.objects.select_related('user').order_by('-user__date_joined').first()
+    new_client = clients_qs.select_related('user').order_by('-user__date_joined').first()
 
     user = request.user
 

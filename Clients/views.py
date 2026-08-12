@@ -2,12 +2,13 @@ from django.contrib import messages
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect
 from Users.models import User
 from Clients.models import Client, ClientMeasurementHistory
 from FoodGroup.models import FoodGroup, FoodGroupExcluded
 from Products.models import ProductExcluded
 from idiet.views import paginate_queryset
+from idiet.permissions import get_visible_client_or_404, visible_clients
 from django.contrib.auth.decorators import login_required
 
 
@@ -119,7 +120,7 @@ def create_client(request):
 
 @login_required
 def client_detail(request, id):
-    client = get_object_or_404(Client, id=id)
+    client = get_visible_client_or_404(request.user, id=id)
 
     if request.method == 'POST':
         client.dni = request.POST.get('dni')
@@ -172,7 +173,7 @@ def client_detail(request, id):
 
 @login_required
 def client_measurement_history(request, id):
-    client = get_object_or_404(Client, id=id)
+    client = get_visible_client_or_404(request.user, id=id)
 
     history = ClientMeasurementHistory.objects.filter(client=client).order_by('updated_at')
     measurement_history_data = [
@@ -249,7 +250,7 @@ def get_clients_list_context(request, clients):
 @login_required
 def deactivate_client(request, id):
     if request.method == 'POST':
-        client = get_object_or_404(Client, id=id, status=True)
+        client = get_visible_client_or_404(request.user, id=id, status=True)
         client.status = False
         client.save()
         messages.success(request, 'Cliente desactivado correctamente')
@@ -258,7 +259,7 @@ def deactivate_client(request, id):
 @login_required
 def reactivate_client(request, id):
     if request.method == 'POST':
-        client = get_object_or_404(Client, id=id, status=False)
+        client = get_visible_client_or_404(request.user, id=id, status=False)
         client.status = True
         client.save()
         messages.success(request, 'Cliente reactivado correctamente')
@@ -268,7 +269,7 @@ def reactivate_client(request, id):
 def deactivate_clients_bulk(request):
     if request.method == 'POST':
         client_ids = request.POST.getlist('selected_clients')
-        clients = Client.objects.filter(id__in=client_ids, status=True)
+        clients = visible_clients(request.user).filter(id__in=client_ids, status=True)
         count = 0
         for client in clients:
             client.status = False
@@ -285,7 +286,7 @@ def deactivate_clients_bulk(request):
 def reactivate_clients_bulk(request):
     if request.method == 'POST':
         client_ids = request.POST.getlist('selected_clients')
-        clients = Client.objects.filter(id__in=client_ids, status=False)
+        clients = visible_clients(request.user).filter(id__in=client_ids, status=False)
         count = 0
         for client in clients:
             client.status = True
@@ -300,13 +301,13 @@ def reactivate_clients_bulk(request):
 
 @login_required
 def list_active_clients(request):
-    clients = Client.objects.filter(status=True)
+    clients = visible_clients(request.user).filter(status=True)
     context = get_clients_list_context(request, clients)
     return render(request, 'admin/list_active_clients.html', context)
 
 
 @login_required
 def list_deactive_clients(request):
-    clients = Client.objects.filter(status=False)
+    clients = visible_clients(request.user).filter(status=False)
     context = get_clients_list_context(request, clients)
     return render(request, 'admin/list_deactive_clients.html', context)

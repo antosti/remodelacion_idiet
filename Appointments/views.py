@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from Appointments.models import Appointment
 from Clients.models import Client
 from idiet.views import paginate_queryset
+from idiet.permissions import scoped_queryset, visible_clients
 
 logger = logging.getLogger('idiet.appointments')
 
@@ -61,7 +62,7 @@ def appointments_view(request):
         except ValueError:
             to_date = None
 
-    appointments = Appointment.objects.filter(status='Pendiente', user_id=request.user.id)
+    appointments = scoped_queryset(Appointment.objects.filter(status='Pendiente'), request.user)
 
     if from_date:
         appointments = appointments.filter(start_date__date__gte=from_date)
@@ -70,7 +71,7 @@ def appointments_view(request):
 
     appointments = appointments.order_by(order_field)
     pagination = paginate_queryset(request, appointments, per_page)
-    clients = Client.objects.filter(user_id=request.user.id)
+    clients = visible_clients(request.user)
 
     appointment_events = [
         {
@@ -113,7 +114,7 @@ def create_appointment_view(request):
         return redirect('appointments')
 
     try:
-        client = Client.objects.get(pk=client_id, user_id=request.user.id)
+        client = visible_clients(request.user).get(pk=client_id)
     except Client.DoesNotExist:
         messages.error(request, "El cliente no existe.")
         return redirect('appointments')
@@ -152,7 +153,10 @@ def create_appointment_view(request):
 
 @login_required
 def update_appointment(request, id):
-    appointment = Appointment.objects.get(pk=id)
+    try:
+        appointment = scoped_queryset(Appointment.objects.all(), request.user).get(pk=id)
+    except Appointment.DoesNotExist:
+        appointment = None
 
     if appointment:
         client_id = request.POST.get('client_id')
@@ -165,7 +169,7 @@ def update_appointment(request, id):
             return redirect('appointments')
 
         try:
-            client = Client.objects.get(pk=client_id, user_id=request.user.id)
+            client = visible_clients(request.user).get(pk=client_id)
         except Client.DoesNotExist:
             messages.error(request, "El cliente no existe.")
             return redirect('appointments')
@@ -225,7 +229,7 @@ def deactivated_appointments_view(request):
     sort_params.pop('sort', None)
     sort_params.pop('direction', None)
 
-    appointments = Appointment.objects.filter(status='Cancelada', user_id=request.user.id)
+    appointments = scoped_queryset(Appointment.objects.filter(status='Cancelada'), request.user)
     appointments = appointments.order_by(order_field)
     pagination = paginate_queryset(request, appointments, per_page)
 
@@ -242,7 +246,7 @@ def deactivated_appointments_view(request):
 @login_required
 def deactivate_appointment(request, id):
     try:
-        appointment = Appointment.objects.get(pk=id, user_id=request.user.id)
+        appointment = scoped_queryset(Appointment.objects.all(), request.user).get(pk=id)
         appointment.status = 'Cancelada'
         appointment.save()
         messages.success(request, 'Cita desactivada correctamente.')
@@ -258,7 +262,7 @@ def reactivate_appointment(request, id):
         return redirect('deactivated_appointments')
 
     try:
-        appointment = Appointment.objects.get(pk=id, user_id=request.user.id, status='Cancelada')
+        appointment = scoped_queryset(Appointment.objects.filter(status='Cancelada'), request.user).get(pk=id)
         appointment.status = 'Pendiente'
         appointment.save()
         messages.success(request, 'Cita reactivada correctamente.')
@@ -274,7 +278,7 @@ def delete_appointment(request, id):
         return redirect('deactivated_appointments')
 
     try:
-        appointment = Appointment.objects.get(pk=id, user_id=request.user.id, status='Cancelada')
+        appointment = scoped_queryset(Appointment.objects.filter(status='Cancelada'), request.user).get(pk=id)
         appointment.delete()
         messages.success(request, 'Cita eliminada definitivamente.')
     except Appointment.DoesNotExist:
@@ -295,10 +299,9 @@ def reactivate_appointments_bulk(request):
         return redirect('deactivated_appointments')
 
     try:
-        appointments = Appointment.objects.filter(
-            pk__in=appointment_ids,
-            user_id=request.user.id,
-            status='Cancelada'
+        appointments = scoped_queryset(
+            Appointment.objects.filter(pk__in=appointment_ids, status='Cancelada'),
+            request.user,
         )
 
         if appointments.exists():
@@ -326,10 +329,9 @@ def delete_appointments_bulk(request):
         return redirect('deactivated_appointments')
 
     try:
-        appointments = Appointment.objects.filter(
-            pk__in=appointment_ids,
-            user_id=request.user.id,
-            status='Cancelada'
+        appointments = scoped_queryset(
+            Appointment.objects.filter(pk__in=appointment_ids, status='Cancelada'),
+            request.user,
         )
 
         if appointments.exists():
@@ -357,11 +359,11 @@ def deactivate_appointments_bulk(request):
         return redirect('appointments')
     
     try:
-        appointments = Appointment.objects.filter(
-            pk__in=appointment_ids,
-            user_id=request.user.id
+        appointments = scoped_queryset(
+            Appointment.objects.filter(pk__in=appointment_ids),
+            request.user,
         )
-        
+
         if appointments.exists():
             count = appointments.count()
             appointments.update(status='Cancelada')
