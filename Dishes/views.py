@@ -10,6 +10,7 @@ from Dishes.models import Dish, DishProduct
 from Micronutrients.models import Micronutrient
 from Products.models import Product
 from idiet.views import paginate_queryset
+from idiet.permissions import scoped_queryset
 from django.contrib.auth.decorators import login_required
 
 
@@ -226,9 +227,9 @@ def get_dish_context(request, active=True):
     sort = request.GET.get('sort', 'name').strip()
     direction = request.GET.get('direction', 'asc').strip()
 
-    dishes = Dish.objects.filter(active=active).prefetch_related(
-        'dishproduct_set__product'
-    )
+    dishes = scoped_queryset(
+        Dish.objects.filter(active=active), request.user, include_unassigned=True
+    ).prefetch_related('dishproduct_set__product')
 
     if dish_name:
         dishes = dishes.filter(name__icontains=dish_name)

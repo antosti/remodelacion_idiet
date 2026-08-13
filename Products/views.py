@@ -10,6 +10,7 @@ from FoodGroup.models import FoodGroup
 from Micronutrients.models import Micronutrient
 from Products.models import Product, ProductMicronutrient
 from SuperGroup.models import SuperGroup
+from idiet.permissions import scoped_queryset
 from idiet.views import paginate_queryset
 
 
@@ -223,7 +224,9 @@ def edit_food(request, id):
 @login_required
 def search_products(request):
     query = request.GET.get('q', '').strip()
-    products = Product.objects.filter(is_active=True)
+    products = scoped_queryset(
+        Product.objects.filter(is_active=True), request.user, include_unassigned=True
+    )
 
     if query:
         products = products.filter(food_name_spanish__icontains=query)
@@ -390,7 +393,9 @@ def delete_foods_bulk(request):
 
 @login_required
 def list_active_foods(request):
-    products = Product.objects.filter(is_active=True)
+    products = scoped_queryset(
+        Product.objects.filter(is_active=True), request.user, include_unassigned=True
+    )
 
     context = get_foods_list_context(request, products)
     context['food_groups'] = FoodGroup.objects.all()
@@ -400,7 +405,9 @@ def list_active_foods(request):
 
 @login_required
 def list_deactive_foods(request):
-    products = Product.objects.filter(is_active=False)
+    products = scoped_queryset(
+        Product.objects.filter(is_active=False), request.user, include_unassigned=True
+    )
 
     context = get_foods_list_context(request, products)
     context['food_groups'] = FoodGroup.objects.all()
