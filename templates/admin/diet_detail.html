@@ -1,0 +1,78 @@
+{% extends 'admin/layout.html' %}
+{% block title %} Detalle de dieta {% endblock %}
+{% load static %}
+
+{% block content %}
+<div class="w-full p-6 bg-gray-50 rounded-2xl">
+    <div class="flex flex-row justify-between items-center px-2 mb-6">
+        <h1 class="text-2xl font-bold text-gray-700">
+            Dieta — {{ client.first_name }} {{ client.last_name }}
+        </h1>
+        <p class="text-sm text-gray-500">
+            {{ menu.date_ini|date:'d/m/Y' }} — {{ menu.date_fin|date:'d/m/Y' }}
+        </p>
+    </div>
+
+    {% if weeks %}
+    <div class="space-y-8">
+        {% for week in weeks %}
+        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 text-gray-600">
+                            <th class="px-3 py-3 text-left text-xs font-semibold uppercase border-b border-gray-200 w-40">
+                                Toma
+                            </th>
+                            {% for day in week.days %}
+                            <th class="px-3 py-3 text-center border-b border-l border-gray-200 {% if not day.in_range %}bg-gray-100{% endif %}">
+                                <div class="text-xs font-semibold uppercase">{{ day.weekday_name }}</div>
+                                <div class="text-xs text-gray-400">{{ day.date|date:'d/m' }}</div>
+                                {% if day.totals %}
+                                <div class="mt-1 text-xs font-semibold text-idiet">{{ day.totals.kcal|floatformat:0 }} kcal</div>
+                                {% endif %}
+                            </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in week.rows %}
+                        <tr class="border-b border-gray-100 last:border-b-0">
+                            <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 align-top whitespace-nowrap">
+                                {{ row.alias }}
+                            </th>
+                            {% for cell in row.cells %}
+                            <td class="px-3 py-3 border-l border-gray-100 align-top {% if not cell %}bg-gray-50{% endif %}">
+                                {% if cell %}
+                                <div class="text-gray-700 font-medium">{{ cell.dish.name }}</div>
+                                <div class="mt-1 text-xs text-gray-400">
+                                    {{ cell.quantity }} g · {{ cell.kcal|floatformat:0 }} kcal
+                                </div>
+                                <div class="text-xs text-gray-400">
+                                    P {{ cell.prot_total }}g · G {{ cell.fat_total }}g · H {{ cell.carb_total }}g
+                                </div>
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+        <p class="px-3 py-2 text-sm text-gray-400">Esta dieta no tiene platos asignados.</p>
+    </div>
+    {% endif %}
+
+    <div class="flex justify-start pt-6">
+        <a href="{% url 'client_diets' client.id %}"
+            class="w-85 px-4 py-2 border rounded-lg bg-red-500 text-white flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-red-300">
+            Atrás
+        </a>
+    </div>
+</div>
+{% endblock %}

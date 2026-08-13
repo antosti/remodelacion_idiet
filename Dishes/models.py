@@ -1,6 +1,7 @@
 from django.db import models
 from Products.models import Product
 from Intakes.models import Intake
+from Users.models import User
 
 # Create your models here.
 
@@ -17,6 +18,7 @@ class Dish(models.Model):
     language = models.CharField(max_length=50)
     active = models.BooleanField(default=True)
     dish_type = models.CharField(max_length=10, choices=DishType.choices, default=DishType.MAIN)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
 
     # Many to many relationship with Products
     product = models.ManyToManyField(Product, through='DishProduct')

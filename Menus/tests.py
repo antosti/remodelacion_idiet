@@ -36,8 +36,8 @@ def make_product(name, kcal, prot, fat, carb):
     )
 
 
-def make_dish(name, dish_type, product, quantity=200):
-    dish = Dish.objects.create(name=name, recipe_elaboration='', language='es', dish_type=dish_type)
+def make_dish(name, dish_type, product, quantity=200, user=None):
+    dish = Dish.objects.create(name=name, recipe_elaboration='', language='es', dish_type=dish_type, user=user)
     DishProduct.objects.create(dish=dish, product=product, quantity=quantity)
     return dish
 
@@ -70,7 +70,7 @@ class DietGeneratorTests(TestCase):
 
     def test_generate_day_respects_structure(self):
         slot = self._slot()
-        pools = build_candidate_pools(self.client_obj, [slot])
+        pools = build_candidate_pools(self.client_obj, self.nutri, [slot])
         day, _history = generate_day(pools, [slot], self.target, None, pop_size=6, n_generations=5)
 
         courses = day[slot.key]
@@ -83,7 +83,7 @@ class DietGeneratorTests(TestCase):
 
     def test_no_starter_or_dessert_when_not_requested(self):
         slot = self._slot(include_starter=False, include_dessert=False)
-        pools = build_candidate_pools(self.client_obj, [slot])
+        pools = build_candidate_pools(self.client_obj, self.nutri, [slot])
         day, _history = generate_day(pools, [slot], self.target, None, pop_size=6, n_generations=5)
 
         courses = day[slot.key]
@@ -94,15 +94,39 @@ class DietGeneratorTests(TestCase):
     def test_excluded_product_never_appears_in_pool(self):
         ProductExcluded.objects.create(client=self.client_obj, product=self.p_excluded)
         slot = self._slot(include_starter=False, include_dessert=False)
-        pools = build_candidate_pools(self.client_obj, [slot])
+        pools = build_candidate_pools(self.client_obj, self.nutri, [slot])
 
         main_ids = {candidate.dish_id for candidate in pools[slot.key]['main']}
         self.assertNotIn(self.dish_excluded_main.id, main_ids)
         self.assertIn(self.dish_main.id, main_ids)
 
+    def test_dish_owned_by_other_nutri_not_in_pool(self):
+        other_nutri = make_nutri('otro@example.com')
+        other_dish = make_dish('Pollo del otro nutri', Dish.DishType.MAIN, self.p_main, user=other_nutri)
+
+        slot = self._slot(include_starter=False, include_dessert=False)
+        pools = build_candidate_pools(self.client_obj, self.nutri, [slot])
+
+        main_ids = {candidate.dish_id for candidate in pools[slot.key]['main']}
+        self.assertNotIn(other_dish.id, main_ids)
+        self.assertIn(self.dish_main.id, main_ids)  # el global (sin user) si es visible
+
+    def test_dish_owned_by_other_nutri_visible_to_admin(self):
+        admin = make_nutri('admin@example.com')
+        admin.is_staff = True
+        admin.save()
+        other_nutri = make_nutri('otro2@example.com')
+        other_dish = make_dish('Pollo del otro nutri 2', Dish.DishType.MAIN, self.p_main, user=other_nutri)
+
+        slot = self._slot(include_starter=False, include_dessert=False)
+        pools = build_candidate_pools(self.client_obj, admin, [slot])
+
+        main_ids = {candidate.dish_id for candidate in pools[slot.key]['main']}
+        self.assertIn(other_dish.id, main_ids)
+
     def test_max_portion_grams_is_respected(self):
         slot = self._slot(include_starter=False, include_dessert=False)
-        pools = build_candidate_pools(self.client_obj, [slot])
+        pools = build_candidate_pools(self.client_obj, self.nutri, [slot])
         day, _history = generate_day(pools, [slot], self.target, max_portion_grams=50, pop_size=6, n_generations=5)
 
         _candidate, qty = day[slot.key]['main']
@@ -111,7 +135,7 @@ class DietGeneratorTests(TestCase):
     def test_generate_diet_multi_day(self):
         slot = self._slot(include_starter=False, include_dessert=False)
         config = DietConfig(days=3, start_date=date(2026, 9, 1), meal_slots=[slot], target=self.target)
-        days = generate_diet(self.client_obj, config)
+        days = generate_diet(self.client_obj, self.nutri, config)
 
         self.assertEqual(len(days), 3)
         for day in days:
@@ -123,12 +147,12 @@ class DietGeneratorTests(TestCase):
         config = DietConfig(days=1, start_date=date(2026, 9, 1), meal_slots=[slot], target=self.target)
 
         with self.assertRaises(GenerationError):
-            generate_diet(self.client_obj, config)
+            generate_diet(self.client_obj, self.nutri, config)
 
     def test_persist_generated_diet(self):
         slot = self._slot(include_starter=False, include_dessert=False)
         config = DietConfig(days=2, start_date=date(2026, 9, 1), meal_slots=[slot], target=self.target)
-        days = generate_diet(self.client_obj, config)
+        days = generate_diet(self.client_obj, self.nutri, config)
 
         menu = persist_generated_diet(self.nutri, self.client_obj, config, days)
 

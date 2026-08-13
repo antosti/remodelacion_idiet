@@ -6,33 +6,94 @@ from Menus.generator.fitness import fitness
 DEFAULT_POP_SIZE = 24
 DEFAULT_N_GENERATIONS = 60
 DEFAULT_THRESHOLD = 30.0
+DEFAULT_MUTATION_RATE = 0.3
+
+# Peso relativo de cada toma "suelta" en el reparto de kcal del dia (por
+# nombre de Intake) y su racion minima/maxima realista en gramos. No hace
+# falta que los pesos sumen 1: se normalizan sobre las tomas realmente
+# seleccionadas, asi que elegir muchas tomas no dispara el total del dia --
+# cada una se lleva una porcion proporcional a lo que de verdad representa
+# (un tentempie no deberia pesar lo mismo que el desayuno o la comida).
+SINGLE_INTAKE_PROFILES = {
+    'Desayuno': {'weight': 3.0, 'bounds': (100, 400)},
+    'Media mañana': {'weight': 1.0, 'bounds': (30, 150)},
+    'Merienda': {'weight': 1.5, 'bounds': (30, 200)},
+    'Recena': {'weight': 1.0, 'bounds': (30, 150)},
+    'Otros': {'weight': 1.0, 'bounds': (30, 150)},
+}
+DEFAULT_SINGLE_PROFILE = {'weight': 1.5, 'bounds': (50, 250)}
+
+# Peso relativo de cada grupo comida/cena en el reparto de kcal del dia, y
+# como se reparte ese peso entre sus cursos (entrante/principal/postre).
+GROUP_WEIGHTS = {'comida': 5.0, 'cena': 4.0}
+DEFAULT_GROUP_WEIGHT = 4.0
+GROUP_ROLE_SHARE = {'starter': 0.22, 'main': 0.58, 'dessert': 0.20}
+GROUP_ROLE_BOUNDS = {
+    'starter': (80, 250),
+    'main': (120, 400),
+    'dessert': (50, 200),
+}
 
 
-def allocate_quantity(kcal_budget, candidate, max_portion_grams):
+def allocate_quantity(kcal_budget, candidate, bounds, max_portion_grams):
     if candidate.kcal_100g <= 0:
         grams = 100
     else:
         grams = round(kcal_budget / candidate.kcal_100g * 100)
 
-    grams = max(20, grams)
+    min_grams, max_grams = bounds
     if max_portion_grams:
-        grams = min(grams, max_portion_grams)
-    return grams
+        max_grams = min(max_grams, max_portion_grams)
+        min_grams = min(min_grams, max_grams)  # el limite explicito del usuario manda
+
+    return max(min_grams, min(grams, max_grams))
 
 
-def _kcal_per_course(meal_slots, target):
-    total_courses = sum(len(slot.active_roles()) for slot in meal_slots)
-    return (target.kcal / total_courses) if total_courses else 0
+def _bounds_for(slot, role):
+    if slot.kind == 'single':
+        return SINGLE_INTAKE_PROFILES.get(slot.label, DEFAULT_SINGLE_PROFILE)['bounds']
+    return GROUP_ROLE_BOUNDS.get(role, (50, 300))
+
+
+def _slot_weight(slot):
+    if slot.kind == 'single':
+        return SINGLE_INTAKE_PROFILES.get(slot.label, DEFAULT_SINGLE_PROFILE)['weight']
+    return GROUP_WEIGHTS.get(slot.label.lower(), DEFAULT_GROUP_WEIGHT)
+
+
+def _course_kcal_budgets(meal_slots, target):
+    """dict[(slot.key, role)] -> presupuesto de kcal para ese curso, repartiendo
+    target.kcal por peso de toma (no a partes iguales) y normalizando sobre las
+    tomas realmente seleccionadas."""
+    slot_weights = {slot.key: _slot_weight(slot) for slot in meal_slots}
+    total_weight = sum(slot_weights.values()) or 1
+
+    budgets = {}
+    for slot in meal_slots:
+        roles = slot.active_roles()
+        if not roles:
+            continue
+        slot_budget = target.kcal * slot_weights[slot.key] / total_weight
+        if slot.kind == 'single':
+            budgets[(slot.key, roles[0])] = slot_budget
+            continue
+
+        role_shares = {role: GROUP_ROLE_SHARE.get(role, 1.0) for role in roles}
+        total_share = sum(role_shares.values()) or 1
+        for role in roles:
+            budgets[(slot.key, role)] = slot_budget * role_shares[role] / total_share
+    return budgets
 
 
 def _random_day(pools, meal_slots, target, max_portion_grams, rng):
-    kcal_per_course = _kcal_per_course(meal_slots, target)
+    course_budgets = _course_kcal_budgets(meal_slots, target)
     day = {}
     for slot in meal_slots:
         day[slot.key] = {}
         for role in slot.active_roles():
             candidate = rng.choice(pools[slot.key][role])
-            qty = allocate_quantity(kcal_per_course, candidate, max_portion_grams)
+            budget = course_budgets.get((slot.key, role), 0)
+            qty = allocate_quantity(budget, candidate, _bounds_for(slot, role), max_portion_grams)
             day[slot.key][role] = (candidate, qty)
     return day
 
@@ -68,8 +129,8 @@ def mutate(day_menu, pools, meal_slots, target, max_portion_grams, rng):
     alternatives = [c for c in pool if c.dish_id != current_candidate.dish_id]
     candidate = rng.choice(alternatives) if alternatives else current_candidate
 
-    kcal_per_course = _kcal_per_course(meal_slots, target)
-    qty = allocate_quantity(kcal_per_course, candidate, max_portion_grams)
+    budget = _course_kcal_budgets(meal_slots, target).get((slot.key, role), 0)
+    qty = allocate_quantity(budget, candidate, _bounds_for(slot, role), max_portion_grams)
     day_menu[slot.key][role] = (candidate, qty)
     return day_menu
 
@@ -94,12 +155,13 @@ def crossover(day_a, day_b, rng):
 
 def generate_day(pools, meal_slots, target, max_portion_grams=None,
                   pop_size=DEFAULT_POP_SIZE, n_generations=DEFAULT_N_GENERATIONS,
-                  threshold=DEFAULT_THRESHOLD, rng=None):
+                  threshold=DEFAULT_THRESHOLD, mutation_rate=DEFAULT_MUTATION_RATE, rng=None):
     rng = rng or random.Random()
 
     population = [_random_day(pools, meal_slots, target, max_portion_grams, rng) for _ in range(pop_size)]
     best_day = min(population, key=lambda day_menu: fitness(day_menu, target))
-    best_history = []
+    best_score = fitness(best_day, target)
+    best_history = [best_score]
 
     for _ in range(n_generations):
         next_gen = tournament_selection(population, target, rng)
@@ -114,15 +176,23 @@ def generate_day(pools, meal_slots, target, max_portion_grams=None,
                 next_gen.append(copy.deepcopy(next_gen[0]))
         next_gen = next_gen[:pop_size]
 
-        if rng.random() < 0.5:
-            idx = rng.randrange(pop_size)
-            next_gen[idx] = mutate(next_gen[idx], pools, meal_slots, target, max_portion_grams, rng)
+        for i in range(len(next_gen)):
+            if rng.random() < mutation_rate:
+                next_gen[i] = mutate(next_gen[i], pools, meal_slots, target, max_portion_grams, rng)
+
+        # Elitismo: el mejor individuo encontrado en todo el proceso nunca se
+        # pierde entre generaciones (antes se devolvia el mejor de la ULTIMA
+        # generacion, que podia ser peor que uno ya encontrado antes).
+        next_gen[0] = copy.deepcopy(best_day)
 
         population = next_gen
-        best_score, best_day = min(
+        gen_best_score, gen_best_day = min(
             ((fitness(day_menu, target), day_menu) for day_menu in population),
             key=lambda scored: scored[0],
         )
+        if gen_best_score < best_score:
+            best_score, best_day = gen_best_score, gen_best_day
+
         best_history.append(best_score)
         if best_score < threshold:
             break

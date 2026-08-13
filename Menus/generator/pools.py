@@ -3,6 +3,7 @@ from django.db.models import Q
 from Dishes.models import Dish
 from Dishes.views import calculate_dish_nutrition
 from FoodGroup.models import FoodGroupExcluded
+from idiet.permissions import is_admin_user
 from Products.models import ProductExcluded
 from Menus.generator.domain import DishCandidate
 
@@ -26,18 +27,25 @@ def _to_candidate(dish):
     )
 
 
-def build_candidate_pools(client, meal_slots):
-    """dict[slot.key][role] -> list[DishCandidate], solo para los roles activos de cada slot."""
+def build_candidate_pools(client, user, meal_slots):
+    """dict[slot.key][role] -> list[DishCandidate], solo para los roles activos de cada slot.
+
+    Los platos se limitan a los del propio `user` mas los globales (sin
+    propietario), salvo que `user` sea staff/superuser, en cuyo caso se ven
+    todos (mismo criterio de aislamiento que Clients/Appointments)."""
     excluded_products = set(
         ProductExcluded.objects.filter(client=client).values_list('product_id', flat=True)
     )
     excluded_groups = set(
         FoodGroupExcluded.objects.filter(client=client).values_list('food_group_id', flat=True)
     )
+    restrict_by_owner = not is_admin_user(user)
 
     def pool_for(intake, role):
         qs = Dish.objects.filter(active=True, dish_type__in=ROLE_TO_DISH_TYPES[role])
         qs = qs.filter(Q(intakes__isnull=True) | Q(intakes=intake)).distinct()
+        if restrict_by_owner:
+            qs = qs.filter(Q(user__isnull=True) | Q(user=user))
         qs = qs.prefetch_related('dishproduct_set__product')
 
         if excluded_products:

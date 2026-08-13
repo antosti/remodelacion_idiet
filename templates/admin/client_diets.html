@@ -1,0 +1,60 @@
+{% extends 'admin/layout.html' %}
+{% block title %} Dietas del cliente {% endblock %}
+{% load static %}
+
+{% block content %}
+<div class="w-full p-6 bg-gray-50 rounded-2xl">
+    <div class="flex flex-row justify-between items-center px-2 mb-6">
+        <h1 class="text-2xl font-bold text-gray-700">
+            Dietas — {{ client.first_name }} {{ client.last_name }}
+        </h1>
+        <a href="{% url 'create_diet' client.id %}"
+            class="h-10 flex items-center gap-2 px-3 py-1 border rounded-lg bg-idiet text-white text-sm">
+            <h3 class="font-semibold">Crear dieta</h3>
+        </a>
+    </div>
+
+    {% if menus %}
+    <div class="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+        <table class="w-full text-sm text-left">
+            <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
+                <tr>
+                    <th class="px-5 py-3">Fecha inicio</th>
+                    <th class="px-5 py-3">Fecha fin</th>
+                    <th class="px-5 py-3">Duración</th>
+                    <th class="px-5 py-3">Platos</th>
+                    <th class="px-5 py-3"></th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for menu in menus %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-5 py-3 text-gray-700">{{ menu.date_ini|date:'d/m/Y' }}</td>
+                    <td class="px-5 py-3 text-gray-700">{{ menu.date_fin|date:'d/m/Y' }}</td>
+                    <td class="px-5 py-3 text-gray-700">{{ menu.days_count }} día{{ menu.days_count|pluralize }}</td>
+                    <td class="px-5 py-3 text-gray-700">{{ menu.dishes_count }}</td>
+                    <td class="px-5 py-3 text-right">
+                        <a href="{% url 'diet_detail' client.id menu.id %}"
+                            class="px-3 py-1.5 border rounded-lg bg-idiet text-white text-xs font-semibold">
+                            Ver dieta
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+        <p class="px-3 py-2 text-sm text-gray-400">Este cliente todavía no tiene ninguna dieta generada.</p>
+    </div>
+    {% endif %}
+
+    <div class="flex justify-start pt-6">
+        <a href="{% url 'client_detail' client.id %}"
+            class="w-85 px-4 py-2 border rounded-lg bg-red-500 text-white flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-red-300">
+            Atrás
+        </a>
+    </div>
+</div>
+{% endblock %}

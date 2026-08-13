@@ -8,6 +8,10 @@
     <div class="flex flex-row justify-between items-center px-2 mb-6">
         <h1 class="text-2xl font-bold text-gray-700">Ficha de cliente</h1>
         <div class="flex items-center gap-3">
+            <a href="{% url 'client_diets' client.id %}"
+                class="h-10 flex items-center gap-2 px-3 py-1 border rounded-lg bg-idiet text-white text-sm">
+                <h3 class="font-semibold">Ver dietas</h3>
+            </a>
             <a href="{% url 'create_diet' client.id %}"
                 class="h-10 flex items-center gap-2 px-3 py-1 border rounded-lg bg-idiet text-white text-sm">
                 <h3 class="font-semibold">Crear dieta</h3>

@@ -7,11 +7,11 @@ class GenerationError(Exception):
     """Error esperado (config invalida / sin platos suficientes), se muestra tal cual al usuario."""
 
 
-def generate_diet(client, config, rng=None):
+def generate_diet(client, user, config, rng=None):
     if not config.meal_slots:
         raise GenerationError('Selecciona al menos una toma para generar la dieta.')
 
-    pools = build_candidate_pools(client, config.meal_slots)
+    pools = build_candidate_pools(client, user, config.meal_slots)
 
     for slot in config.meal_slots:
         for role in slot.active_roles():
