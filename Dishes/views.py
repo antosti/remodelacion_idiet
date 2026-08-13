@@ -126,6 +126,7 @@ def create_dish(request):
                 recipe_elaboration=request.POST.get('description'),
                 language='es',
                 dish_type=request.POST.get('dish_type') or Dish.DishType.MAIN,
+                user=request.user,
             )
 
             dish.intakes.set(request.POST.getlist('intakes'))

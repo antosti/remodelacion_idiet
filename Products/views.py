@@ -131,6 +131,7 @@ def create_food(request):
                 ch_g=get_decimal_value(request, 'hydrates'),
                 fat_g=get_decimal_value(request, 'fats'),
                 food_group_id=request.POST.get('food_group') or None,
+                user=request.user,
             )
 
             if super_group_ids:

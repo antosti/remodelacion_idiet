@@ -20,10 +20,10 @@ def admin_home(request):
 
     # Dashboard counters
     client = clients_qs.count()
-    dish = Dish.objects.all().count()
-    product = Product.objects.all().count()
+    dish = scoped_queryset(Dish.objects.filter(active=True), request.user, include_unassigned=True).count()
+    product = scoped_queryset(Product.objects.all(), request.user, include_unassigned=True).count()
     menu = Menu.objects.all().count()
-    appointment = appointments_qs.count()
+    appointment = appointments_qs.exclude(status='Cancelada').count()
 
     recent_appointment = appointments_qs.order_by('-id').first()
 
