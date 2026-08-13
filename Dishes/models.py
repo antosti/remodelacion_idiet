@@ -5,12 +5,19 @@ from Intakes.models import Intake
 # Create your models here.
 
 class Dish(models.Model):
-    
+
+    class DishType(models.TextChoices):
+        STARTER = 'entrante', 'Entrante'
+        MAIN = 'principal', 'Plato principal'
+        DESSERT = 'postre', 'Postre'
+        SINGLE = 'unico', 'Plato único'
+
     name = models.CharField(max_length=200)
     recipe_elaboration = models.TextField(max_length=99999)
     language = models.CharField(max_length=50)
     active = models.BooleanField(default=True)
-    
+    dish_type = models.CharField(max_length=10, choices=DishType.choices, default=DishType.MAIN)
+
     # Many to many relationship with Products
     product = models.ManyToManyField(Product, through='DishProduct')
     # Many to many relationship with Intakes

@@ -2,12 +2,14 @@ from django.db import models
 from Users.models import User
 from Intakes.models import Intake
 from Dishes.models import Dish
+from Clients.models import Client
 
 # Create your models here.
 
 class Menu(models.Model):
-    
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='menus', null=True, blank=True)
     date_ini = models.DateField()
     date_fin = models.DateField()
     

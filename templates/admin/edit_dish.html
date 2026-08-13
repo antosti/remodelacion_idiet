@@ -80,6 +80,16 @@
         </div>
 
         <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+            <h2 class="text-lg font-semibold mb-4 text-gray-700">Tipo de plato</h2>
+            <select name="dish_type" class="block w-full sm:w-64 rounded-md border border-gray-300 px-3 py-2 text-sm">
+                {% for value, label in dish_type_choices %}
+                <option value="{{ value }}" {% if value == dish.dish_type %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <p class="mt-2 text-xs text-gray-500">Se usa para saber en qué momento de la dieta puede encajar este plato al generarla automáticamente.</p>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
             <h2 class="text-lg font-semibold mb-4 text-gray-700">Ingestas</h2>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">

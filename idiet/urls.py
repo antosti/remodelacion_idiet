@@ -32,6 +32,7 @@ urlpatterns = [
     path('', include('Intakes.urls')),
     path('', include('Plantillas.urls')),
     path('', include('Appointments.urls')),
+    path('', include('Menus.urls')),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

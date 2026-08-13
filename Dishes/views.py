@@ -125,6 +125,7 @@ def create_dish(request):
                 name=request.POST.get('recipe_name'),
                 recipe_elaboration=request.POST.get('description'),
                 language='es',
+                dish_type=request.POST.get('dish_type') or Dish.DishType.MAIN,
             )
 
             dish.intakes.set(request.POST.getlist('intakes'))
@@ -137,6 +138,7 @@ def create_dish(request):
     return render(request, 'admin/create_dish.html', {
         'intakes': intakes,
         'micronutrient_sections': micronutrient_sections,
+        'dish_type_choices': Dish.DishType.choices,
     })
 
 
@@ -307,6 +309,7 @@ def edit_dish(request, id):
         with transaction.atomic():
             dish.name = request.POST.get('recipe_name')
             dish.recipe_elaboration = request.POST.get('description')
+            dish.dish_type = request.POST.get('dish_type') or Dish.DishType.MAIN
             dish.save()
             dish.intakes.set(request.POST.getlist('intakes'))
 
@@ -345,6 +348,7 @@ def edit_dish(request, id):
         'nutrition': nutrition,
         'dish_products': dish_products,
         'existing_ingredients': existing_ingredients,
+        'dish_type_choices': Dish.DishType.choices,
     })
 
 
