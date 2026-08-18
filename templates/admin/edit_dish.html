@@ -4,6 +4,7 @@
 
 {% block extra_js %}
 {{ existing_ingredients|json_script:"existing-ingredients" }}
+<script src="https://unpkg.com/chart.js@4"></script>
 <script src="{% static 'js/dish_ingredients.js' %}"></script>
 {% endblock %}
 
@@ -180,6 +181,12 @@
                                 <span
                                     class="flex items-center border border-l-0 rounded-r-lg px-3 text-gray-500 bg-gray-50">%</span>
                             </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 pt-5 border-t border-gray-100 flex items-center justify-center">
+                        <div class="w-48 h-48">
+                            <canvas id="dishMacrosChart"></canvas>
                         </div>
                     </div>
                 </div>

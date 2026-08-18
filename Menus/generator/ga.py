@@ -9,55 +9,43 @@ DEFAULT_THRESHOLD = 30.0
 DEFAULT_MUTATION_RATE = 0.3
 
 # Peso relativo de cada toma "suelta" en el reparto de kcal del dia (por
-# nombre de Intake) y su racion minima/maxima realista en gramos. No hace
-# falta que los pesos sumen 1: se normalizan sobre las tomas realmente
-# seleccionadas, asi que elegir muchas tomas no dispara el total del dia --
-# cada una se lleva una porcion proporcional a lo que de verdad representa
-# (un tentempie no deberia pesar lo mismo que el desayuno o la comida).
-SINGLE_INTAKE_PROFILES = {
-    'Desayuno': {'weight': 3.0, 'bounds': (100, 400)},
-    'Media mañana': {'weight': 1.0, 'bounds': (30, 150)},
-    'Merienda': {'weight': 1.5, 'bounds': (30, 200)},
-    'Recena': {'weight': 1.0, 'bounds': (30, 150)},
-    'Otros': {'weight': 1.0, 'bounds': (30, 150)},
+# nombre de Intake). No hace falta que los pesos sumen 1: se normalizan sobre
+# las tomas realmente seleccionadas, asi que elegir muchas tomas no dispara
+# el total del dia -- cada una se lleva una porcion proporcional a lo que de
+# verdad representa (un tentempie no deberia pesar lo mismo que el desayuno
+# o la comida).
+SINGLE_INTAKE_WEIGHTS = {
+    'Desayuno': 3.0,
+    'Media mañana': 1.0,
+    'Merienda': 1.5,
+    'Recena': 1.0,
+    'Otros': 1.0,
 }
-DEFAULT_SINGLE_PROFILE = {'weight': 1.5, 'bounds': (50, 250)}
+DEFAULT_SINGLE_WEIGHT = 1.5
 
 # Peso relativo de cada grupo comida/cena en el reparto de kcal del dia, y
 # como se reparte ese peso entre sus cursos (entrante/principal/postre).
 GROUP_WEIGHTS = {'comida': 5.0, 'cena': 4.0}
 DEFAULT_GROUP_WEIGHT = 4.0
 GROUP_ROLE_SHARE = {'starter': 0.22, 'main': 0.58, 'dessert': 0.20}
-GROUP_ROLE_BOUNDS = {
-    'starter': (80, 250),
-    'main': (120, 400),
-    'dessert': (50, 200),
-}
 
 
-def allocate_quantity(kcal_budget, candidate, bounds, max_portion_grams):
+def allocate_quantity(kcal_budget, candidate, max_portion_grams):
     if candidate.kcal_100g <= 0:
         grams = 100
     else:
         grams = round(kcal_budget / candidate.kcal_100g * 100)
 
-    min_grams, max_grams = bounds
+    grams = max(20, grams)
     if max_portion_grams:
-        max_grams = min(max_grams, max_portion_grams)
-        min_grams = min(min_grams, max_grams)  # el limite explicito del usuario manda
+        grams = min(grams, max_portion_grams)
 
-    return max(min_grams, min(grams, max_grams))
-
-
-def _bounds_for(slot, role):
-    if slot.kind == 'single':
-        return SINGLE_INTAKE_PROFILES.get(slot.label, DEFAULT_SINGLE_PROFILE)['bounds']
-    return GROUP_ROLE_BOUNDS.get(role, (50, 300))
+    return grams
 
 
 def _slot_weight(slot):
     if slot.kind == 'single':
-        return SINGLE_INTAKE_PROFILES.get(slot.label, DEFAULT_SINGLE_PROFILE)['weight']
+        return SINGLE_INTAKE_WEIGHTS.get(slot.label, DEFAULT_SINGLE_WEIGHT)
     return GROUP_WEIGHTS.get(slot.label.lower(), DEFAULT_GROUP_WEIGHT)
 
 
@@ -93,7 +81,7 @@ def _random_day(pools, meal_slots, target, max_portion_grams, rng):
         for role in slot.active_roles():
             candidate = rng.choice(pools[slot.key][role])
             budget = course_budgets.get((slot.key, role), 0)
-            qty = allocate_quantity(budget, candidate, _bounds_for(slot, role), max_portion_grams)
+            qty = allocate_quantity(budget, candidate, max_portion_grams)
             day[slot.key][role] = (candidate, qty)
     return day
 
@@ -130,7 +118,7 @@ def mutate(day_menu, pools, meal_slots, target, max_portion_grams, rng):
     candidate = rng.choice(alternatives) if alternatives else current_candidate
 
     budget = _course_kcal_budgets(meal_slots, target).get((slot.key, role), 0)
-    qty = allocate_quantity(budget, candidate, _bounds_for(slot, role), max_portion_grams)
+    qty = allocate_quantity(budget, candidate, max_portion_grams)
     day_menu[slot.key][role] = (candidate, qty)
     return day_menu
 

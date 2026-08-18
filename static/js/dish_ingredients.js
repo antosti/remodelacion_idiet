@@ -11,9 +11,53 @@ document.addEventListener('DOMContentLoaded', () => {
   const carbsField = document.getElementById('dishCarbsField');
   const proteinField = document.getElementById('dishProteinField');
   const fatField = document.getElementById('dishFatField');
+  const macrosChartCanvas = document.getElementById('dishMacrosChart');
 
   let ingredients = [];
   let searchTimeout = null;
+  let macrosChart = null;
+
+  function renderMacrosChart(carbs, protein, fat) {
+    if (!macrosChartCanvas || typeof Chart === 'undefined') return;
+
+    const data = [carbs, protein, fat];
+    const total = carbs + protein + fat;
+
+    if (macrosChart) {
+      macrosChart.data.datasets[0].data = data;
+      macrosChart.update();
+      return;
+    }
+
+    macrosChart = new Chart(macrosChartCanvas, {
+      type: 'doughnut',
+      data: {
+        labels: ['Hidratos', 'Proteínas', 'Grasa'],
+        datasets: [{
+          data: data,
+          backgroundColor: ['#8bbb31', '#3b82f6', '#f59e0b'],
+          borderWidth: 0,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+          tooltip: {
+            callbacks: {
+              label: (context) => {
+                const value = context.raw || 0;
+                const currentTotal = context.chart.data.datasets[0].data.reduce((sum, v) => sum + v, 0);
+                const percent = currentTotal ? (value / currentTotal * 100).toFixed(1) : '0.0';
+                return `${context.label}: ${percent}%`;
+              },
+            },
+          },
+        },
+      },
+    });
+  }
 
   const initialDataEl = document.getElementById('existing-ingredients');
 
@@ -125,6 +169,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (carbsField) carbsField.value = carbs100g.toFixed(2);
     if (proteinField) proteinField.value = protein100g.toFixed(2);
     if (fatField) fatField.value = fat100g.toFixed(2);
+
+    renderMacrosChart(carbs100g, protein100g, fat100g);
   }
 
   function addIngredient(product) {
