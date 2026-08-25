@@ -12,7 +12,12 @@ class Menu(models.Model):
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='menus', null=True, blank=True)
     date_ini = models.DateField()
     date_fin = models.DateField()
-    
+
+    # Parametros usados para generar esta dieta (tomas, objetivo nutricional,
+    # tamano de racion), guardados como JSON para poder "rehacer" el menu mas
+    # tarde con los mismos ajustes (ver Menus.generator.domain.serialize_config).
+    generation_config = models.JSONField(null=True, blank=True)
+
     # Many to many relationship with Intakes
     intake = models.ManyToManyField(Intake, through='MenuIntake')
     

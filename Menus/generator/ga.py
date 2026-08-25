@@ -29,6 +29,14 @@ GROUP_WEIGHTS = {'comida': 5.0, 'cena': 4.0}
 DEFAULT_GROUP_WEIGHT = 4.0
 GROUP_ROLE_SHARE = {'starter': 0.22, 'main': 0.58, 'dessert': 0.20}
 
+# La racion real del plato (candidate.portion_grams, ver Menus.generator.pools)
+# es una referencia de lo que se sirve normalmente, no un techo absoluto: con
+# pocas tomas activas o objetivos de kcal altos, respetarla a rajatabla deja
+# el dia por debajo del target sin que el GA pueda hacer nada (ningun reparto
+# de gramos lo arregla si el tope ya bloquea el maximo). Se permite superarla
+# hasta este factor antes de recortar del todo.
+PORTION_STRETCH_FACTOR = 1.5
+
 
 def allocate_quantity(kcal_budget, candidate, max_portion_grams):
     if candidate.kcal_100g <= 0:
@@ -37,7 +45,10 @@ def allocate_quantity(kcal_budget, candidate, max_portion_grams):
         grams = round(kcal_budget / candidate.kcal_100g * 100)
 
     grams = max(20, grams)
-    if max_portion_grams:
+
+    if candidate.portion_grams:
+        grams = min(grams, round(candidate.portion_grams * PORTION_STRETCH_FACTOR))
+    elif max_portion_grams:
         grams = min(grams, max_portion_grams)
 
     return grams

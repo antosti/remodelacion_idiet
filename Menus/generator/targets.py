@@ -24,6 +24,18 @@ def harris_benedict_bmr(weight_kg, height_cm, age_years, gender):
     return base + 5 if gender == 'Male' else base - 161
 
 
+def macro_split_for_kcal(kcal):
+    """Reparto de macros estandar (20% prot / 25% grasa / 55% HC) para un
+    objetivo de kcal dado, usado tanto para el calculo automatico como para
+    completar los campos avanzados que el nutricionista deja en blanco."""
+    return NutritionTarget(
+        kcal=round(kcal),
+        prot_g=round(kcal * 0.20 / 4),
+        fat_g=round(kcal * 0.25 / 9),
+        carb_g=round(kcal * 0.55 / 4),
+    )
+
+
 def default_target_for_client(client):
     """Objetivo nutricional por defecto para un cliente, usado cuando el
     nutricionista no rellena la configuracion avanzada del wizard."""
@@ -35,13 +47,4 @@ def default_target_for_client(client):
         factor = ACTIVITY_FACTORS.get(client.gender, ACTIVITY_FACTORS['Male']).get(client.activity_level, 1.55)
         kcal = bmr * factor
 
-    prot_g = kcal * 0.20 / 4
-    fat_g = kcal * 0.25 / 9
-    carb_g = kcal * 0.55 / 4
-
-    return NutritionTarget(
-        kcal=round(kcal),
-        prot_g=round(prot_g),
-        fat_g=round(fat_g),
-        carb_g=round(carb_g),
-    )
+    return macro_split_for_kcal(kcal)

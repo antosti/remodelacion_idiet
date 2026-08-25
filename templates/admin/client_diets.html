@@ -2,6 +2,10 @@
 {% block title %} Dietas del cliente {% endblock %}
 {% load static %}
 
+{% block extra_js %}
+<script src="{% static 'js/client_diets.js' %}"></script>
+{% endblock %}
+
 {% block content %}
 <div class="w-full p-6 bg-gray-50 rounded-2xl">
     <div class="flex flex-row justify-between items-center px-2 mb-6">
@@ -34,10 +38,19 @@
                     <td class="px-5 py-3 text-gray-700">{{ menu.days_count }} día{{ menu.days_count|pluralize }}</td>
                     <td class="px-5 py-3 text-gray-700">{{ menu.dishes_count }}</td>
                     <td class="px-5 py-3 text-right">
-                        <a href="{% url 'diet_detail' client.id menu.id %}"
-                            class="px-3 py-1.5 border rounded-lg bg-idiet text-white text-xs font-semibold">
-                            Ver dieta
-                        </a>
+                        <div class="flex items-center justify-end gap-2">
+                            <a href="{% url 'diet_detail' client.id menu.id %}"
+                                class="px-3 py-1.5 border rounded-lg bg-idiet text-white text-xs font-semibold">
+                                Ver dieta
+                            </a>
+                            <form id="delete-menu-form-{{ menu.id }}" method="post" action="{% url 'delete_menu' client.id menu.id %}">
+                                {% csrf_token %}
+                            </form>
+                            <button type="button" class="delete-menu-btn px-3 py-1.5 border rounded-lg bg-red-500 text-white text-xs font-semibold hover:bg-red-600"
+                                data-form-id="delete-menu-form-{{ menu.id }}">
+                                Eliminar
+                            </button>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -55,6 +68,23 @@
             class="w-85 px-4 py-2 border rounded-lg bg-red-500 text-white flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-red-300">
             Atrás
         </a>
+    </div>
+
+    <div id="delete-menu-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div class="bg-white rounded-2xl shadow-lg w-full max-w-md mx-4 p-5 space-y-4">
+            <h3 class="text-lg font-semibold text-gray-700">Eliminar dieta</h3>
+            <p class="text-sm text-gray-500">
+                ¿Seguro que quieres eliminar esta dieta? Esta acción no se puede deshacer.
+            </p>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" id="delete-menu-cancel" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50">
+                    Cancelar
+                </button>
+                <button type="button" id="delete-menu-confirm" class="px-4 py-2 rounded-lg bg-red-500 text-white font-medium hover:bg-red-600">
+                    Eliminar
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

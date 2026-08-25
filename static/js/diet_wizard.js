@@ -63,41 +63,72 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    function fieldValue(name) {
+        const field = form.querySelector('[name="' + name + '"]');
+        return field ? field.value : '';
+    }
+
     function renderSummary() {
         const summary = document.getElementById('diet-wizard-summary');
         if (!summary) {
             return;
         }
 
-        const days = form.querySelector('[name="days"]').value || '-';
-        const startDate = form.querySelector('[name="start_date"]').value || '-';
+        // Cualquier fallo aqui (campo inesperado, DOM desincronizado con una
+        // version anterior cacheada del JS...) no debe dejar el resumen en
+        // blanco sin explicacion: se captura y se avisa en vez de silenciarlo.
+        try {
+            const days = fieldValue('days') || '-';
+            const startDate = fieldValue('start_date') || '-';
 
-        const meals = [];
-        form.querySelectorAll('[name="standalone_intakes"]:checked').forEach(function (input) {
-            meals.push(input.closest('label').textContent.trim());
-        });
-        form.querySelectorAll('[data-meal-group-toggle]:checked').forEach(function (toggle) {
-            const groupKey = toggle.closest('[data-meal-group]').dataset.mealGroup;
-            meals.push(groupKey.charAt(0).toUpperCase() + groupKey.slice(1));
-        });
+            const meals = [];
+            form.querySelectorAll('[name="standalone_intakes"]:checked').forEach(function (input) {
+                const label = input.closest('label');
+                if (label) {
+                    meals.push(label.textContent.trim());
+                }
+            });
+            form.querySelectorAll('[data-meal-group-toggle]:checked').forEach(function (toggle) {
+                const group = toggle.closest('[data-meal-group]');
+                const groupKey = group ? group.dataset.mealGroup : '';
+                if (groupKey) {
+                    meals.push(groupKey.charAt(0).toUpperCase() + groupKey.slice(1));
+                }
+            });
 
-        const kcal = form.querySelector('[name="target_kcal"]').value;
-        const limitPortion = limitPortionCheckbox && limitPortionCheckbox.checked;
-        const maxGrams = limitPortion ? form.querySelector('[name="max_portion_grams"]').value : null;
+            const kcal = fieldValue('target_kcal');
+            const limitPortion = limitPortionCheckbox && limitPortionCheckbox.checked;
+            const portionSize = limitPortion ? fieldValue('portion_size') : null;
 
-        summary.innerHTML = '';
-        const lines = [
-            'Duración: ' + days + ' día(s), desde ' + startDate,
-            'Tomas incluidas: ' + (meals.length ? meals.join(', ') : 'ninguna seleccionada'),
-            'Objetivo kcal/día: ' + (kcal || 'calculado automáticamente'),
-            'Límite de ración: ' + (limitPortion ? (maxGrams || '-') + ' g' : 'sin límite'),
-        ];
-        lines.forEach(function (line) {
-            const p = document.createElement('p');
-            p.textContent = line;
-            summary.appendChild(p);
-        });
+            summary.innerHTML = '';
+            const lines = [
+                'Duración: ' + days + ' día(s), desde ' + startDate,
+                'Tomas incluidas: ' + (meals.length ? meals.join(', ') : 'ninguna seleccionada'),
+                'Objetivo kcal/día: ' + (kcal || 'calculado automáticamente'),
+                'Tamaño de ración: ' + (limitPortion ? (portionSize || '-') : 'natural de cada plato'),
+            ];
+            lines.forEach(function (line) {
+                const p = document.createElement('p');
+                p.textContent = line;
+                summary.appendChild(p);
+            });
+        } catch (err) {
+            summary.textContent = 'No se ha podido generar el resumen. Revisa los datos de los pasos anteriores.';
+        }
     }
+
+    // Paso 4: mostrar un aviso mientras el servidor genera la dieta (puede
+    // tardar varios segundos), para que no parezca que la pagina no responde.
+    const loadingOverlay = document.getElementById('diet-wizard-loading-overlay');
+    form.addEventListener('submit', function () {
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Generando…';
+        }
+        if (loadingOverlay) {
+            loadingOverlay.classList.remove('hidden');
+        }
+    });
 
     showStep(currentStep);
 });

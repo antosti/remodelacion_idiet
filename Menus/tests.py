@@ -1,4 +1,6 @@
+import json
 from datetime import date
+from decimal import Decimal
 
 from django.test import TestCase
 from django.urls import reverse
@@ -218,3 +220,223 @@ class CreateDietViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Menu.objects.filter(client=self.client1).exists())
+
+
+class EditMenuIntakeViewTests(TestCase):
+
+    def setUp(self):
+        self.nutri = make_nutri('nutri3@example.com')
+        self.client_obj = make_client(self.nutri)
+
+        self.p_main = make_product('Pollo', kcal=200, prot=30, fat=5, carb=0)
+        self.p_main_alt = make_product('Ternera', kcal=250, prot=28, fat=15, carb=0)
+
+        self.dish_main = make_dish('Pollo asado', Dish.DishType.MAIN, self.p_main)
+        self.dish_main_alt = make_dish('Ternera asada', Dish.DishType.MAIN, self.p_main_alt)
+
+        _, groups = get_meal_structure()
+        self.main_intake = groups['comida']['main']
+
+        self.menu = Menu.objects.create(
+            user=self.nutri, client=self.client_obj,
+            date_ini=date(2026, 9, 1), date_fin=date(2026, 9, 1),
+        )
+        self.item = MenuIntake.objects.create(
+            menu=self.menu, dish=self.dish_main, intake=self.main_intake,
+            quantity=100, kcal=Decimal('200.00'), menu_day=0,
+            intake_alias='Plato principal - Comida',
+        )
+
+    def _url(self, item=None):
+        item = item or self.item
+        return reverse('edit_menu_intake', args=[self.client_obj.id, self.menu.id, item.id])
+
+    def test_get_returns_current_state_and_options(self):
+        self.client.force_login(self.nutri)
+        response = self.client.get(self._url())
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['dish_id'], self.dish_main.id)
+        self.assertEqual(data['quantity'], 100)
+        option_ids = {opt['id'] for opt in data['options']}
+        self.assertIn(self.dish_main.id, option_ids)
+        self.assertIn(self.dish_main_alt.id, option_ids)
+
+    def test_post_updates_dish_quantity_and_kcal_without_touching_other_rows(self):
+        other_item = MenuIntake.objects.create(
+            menu=self.menu, dish=self.dish_main, intake=self.main_intake,
+            quantity=150, kcal=Decimal('300.00'), menu_day=0,
+            intake_alias='Otros',
+        )
+
+        self.client.force_login(self.nutri)
+        response = self.client.post(
+            self._url(), data=json.dumps({'dish_id': self.dish_main_alt.id, 'quantity': 150}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data['dish_name'], 'Ternera asada')
+        self.assertEqual(data['quantity'], 150)
+        self.assertAlmostEqual(data['kcal'], 375.0)  # 250 kcal/100g * 150g
+        self.assertAlmostEqual(data['day_kcal'], 375.0 + 300.0)
+
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.dish_id, self.dish_main_alt.id)
+        self.assertEqual(self.item.quantity, 150)
+
+        other_item.refresh_from_db()
+        self.assertEqual(other_item.dish_id, self.dish_main.id)
+        self.assertEqual(other_item.quantity, 150)
+
+    def test_post_rejects_invalid_dish(self):
+        self.client.force_login(self.nutri)
+        response = self.client.post(
+            self._url(), data=json.dumps({'dish_id': 999999, 'quantity': 100}),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_other_nutri_cannot_edit(self):
+        other_nutri = make_nutri('otro3@example.com')
+        self.client.force_login(other_nutri)
+        response = self.client.get(self._url())
+        self.assertEqual(response.status_code, 404)
+
+
+class DeleteMenuViewTests(TestCase):
+
+    def setUp(self):
+        self.nutri = make_nutri('nutri5@example.com')
+        self.client_obj = make_client(self.nutri)
+        self.menu = Menu.objects.create(
+            user=self.nutri, client=self.client_obj,
+            date_ini=date(2026, 9, 1), date_fin=date(2026, 9, 1),
+        )
+
+    def _url(self, menu=None):
+        menu = menu or self.menu
+        return reverse('delete_menu', args=[self.client_obj.id, menu.id])
+
+    def test_nutri_can_delete_own_client_menu(self):
+        self.client.force_login(self.nutri)
+        response = self.client.post(self._url())
+
+        self.assertRedirects(response, reverse('client_diets', args=[self.client_obj.id]))
+        self.assertFalse(Menu.objects.filter(id=self.menu.id).exists())
+
+    def test_get_not_allowed(self):
+        self.client.force_login(self.nutri)
+        response = self.client.get(self._url())
+
+        self.assertEqual(response.status_code, 405)
+        self.assertTrue(Menu.objects.filter(id=self.menu.id).exists())
+
+    def test_other_nutri_cannot_delete(self):
+        other_nutri = make_nutri('otro5@example.com')
+        self.client.force_login(other_nutri)
+        response = self.client.post(self._url())
+
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(Menu.objects.filter(id=self.menu.id).exists())
+
+
+class RegenerateMenuViewTests(TestCase):
+
+    def setUp(self):
+        self.nutri = make_nutri('nutri4@example.com')
+        self.client_obj = make_client(self.nutri)
+
+        self.p_main = make_product('Pollo', kcal=200, prot=30, fat=5, carb=0)
+        self.dish_main = make_dish('Pollo asado', Dish.DishType.MAIN, self.p_main)
+
+        _, groups = get_meal_structure()
+        self.comida = groups['comida']
+        self.target = NutritionTarget(kcal=800, prot_g=60, fat_g=25, carb_g=80)
+
+        self.slot = MealSlotConfig(
+            key='group-comida', label='Comida', kind='group', intakes=self.comida,
+            include_starter=False, include_dessert=False,
+        )
+        self.config = DietConfig(days=1, start_date=date(2026, 9, 1), meal_slots=[self.slot], target=self.target)
+        days = generate_diet(self.client_obj, self.nutri, self.config)
+        self.menu = persist_generated_diet(self.nutri, self.client_obj, self.config, days)
+        self.item = MenuIntake.objects.get(menu=self.menu, intake_alias='Plato principal - Comida')
+
+    def _url(self, menu=None):
+        menu = menu or self.menu
+        return reverse('regenerate_menu', args=[self.client_obj.id, menu.id])
+
+    def test_regenerate_deletes_old_menu_and_creates_new_one(self):
+        self.client.force_login(self.nutri)
+        old_menu_id = self.menu.id
+        response = self.client.post(self._url())
+
+        self.assertFalse(Menu.objects.filter(id=old_menu_id).exists())
+        new_menu = Menu.objects.get(client=self.client_obj)
+        self.assertNotEqual(new_menu.id, old_menu_id)
+        self.assertRedirects(response, reverse('diet_detail', args=[self.client_obj.id, new_menu.id]))
+        self.assertTrue(MenuIntake.objects.filter(menu=new_menu).exists())
+
+    def test_regenerate_keeps_locked_dish_and_quantity_in_place(self):
+        self.item.quantity = 33
+        self.item.save(update_fields=['quantity'])
+
+        self.client.force_login(self.nutri)
+        self.client.post(self._url(), {'locked_items': [self.item.id]})
+
+        new_menu = Menu.objects.get(client=self.client_obj)
+        new_item = MenuIntake.objects.get(menu=new_menu, menu_day=0, intake_alias='Plato principal - Comida')
+        self.assertEqual(new_item.dish_id, self.dish_main.id)
+        self.assertEqual(new_item.quantity, 33)
+
+    def test_regenerate_without_config_uses_menu_daily_kcal_as_target(self):
+        # Simula una dieta antigua sin generation_config, cuyo objetivo real
+        # (1200 kcal/dia) es muy distinto del que calcularia por defecto
+        # default_target_for_client para este cliente de prueba.
+        self.item.kcal = Decimal('1200.00')
+        self.item.quantity = 600
+        self.item.save(update_fields=['kcal', 'quantity'])
+        self.menu.generation_config = None
+        self.menu.save(update_fields=['generation_config'])
+
+        self.client.force_login(self.nutri)
+        self.client.post(self._url())
+
+        new_menu = Menu.objects.get(client=self.client_obj)
+        new_item = MenuIntake.objects.get(menu=new_menu, menu_day=0, intake_alias='Plato principal - Comida')
+        self.assertEqual(new_item.quantity, 600)
+        self.assertAlmostEqual(float(new_item.kcal), 1200.0, delta=1)
+
+    def test_regenerate_works_for_legacy_menu_without_generation_config(self):
+        # Simula una dieta generada antes de que existiera Menu.generation_config.
+        self.menu.generation_config = None
+        self.menu.save(update_fields=['generation_config'])
+
+        self.client.force_login(self.nutri)
+        old_menu_id = self.menu.id
+        response = self.client.post(self._url())
+
+        self.assertFalse(Menu.objects.filter(id=old_menu_id).exists())
+        new_menu = Menu.objects.get(client=self.client_obj)
+        self.assertRedirects(response, reverse('diet_detail', args=[self.client_obj.id, new_menu.id]))
+        self.assertTrue(MenuIntake.objects.filter(menu=new_menu).exists())
+
+    def test_menu_without_any_intakes_cannot_regenerate(self):
+        plain_menu = Menu.objects.create(
+            user=self.nutri, client=self.client_obj,
+            date_ini=date(2026, 9, 5), date_fin=date(2026, 9, 5),
+        )
+        self.client.force_login(self.nutri)
+        response = self.client.post(self._url(plain_menu))
+
+        self.assertRedirects(response, reverse('diet_detail', args=[self.client_obj.id, plain_menu.id]))
+        self.assertTrue(Menu.objects.filter(id=plain_menu.id).exists())
+
+    def test_other_nutri_cannot_regenerate(self):
+        other_nutri = make_nutri('otro4@example.com')
+        self.client.force_login(other_nutri)
+        response = self.client.post(self._url())
+        self.assertEqual(response.status_code, 404)

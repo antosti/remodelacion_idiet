@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from django.db import transaction
 
-from Menus.generator.domain import ROLE_LABELS
+from Menus.generator.domain import ROLE_LABELS, serialize_config
 from Menus.models import Menu, MenuIntake
 
 
@@ -16,6 +16,7 @@ def persist_generated_diet(user, client, config, days):
             client=client,
             date_ini=config.start_date,
             date_fin=end_date,
+            generation_config=serialize_config(config),
         )
 
         rows = []

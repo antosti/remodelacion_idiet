@@ -11,7 +11,7 @@ def generate_diet(client, user, config, rng=None):
     if not config.meal_slots:
         raise GenerationError('Selecciona al menos una toma para generar la dieta.')
 
-    pools = build_candidate_pools(client, user, config.meal_slots)
+    pools = build_candidate_pools(client, user, config.meal_slots, config.portion_size)
 
     for slot in config.meal_slots:
         for role in slot.active_roles():
