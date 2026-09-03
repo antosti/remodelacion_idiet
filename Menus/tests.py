@@ -1,20 +1,24 @@
 import json
 from datetime import date
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.test import TestCase
 from django.urls import reverse
 
 from Clients.models import Client
 from Dishes.models import Dish, DishProduct
-from Menus.generator.domain import DietConfig, MealSlotConfig, NutritionTarget
+from Menus.generator import service
+from Menus.generator.domain import DietConfig, DishCandidate, MealSlotConfig, NutritionTarget
+from Menus.generator.fitness import fitness
 from Menus.generator.ga import generate_day
 from Menus.generator.meal_structure import get_meal_structure
+from Menus.generator.micronutrients import MICRO_IDS, ranges_for_client
 from Menus.generator.persistence import persist_generated_diet
 from Menus.generator.pools import build_candidate_pools
-from Menus.generator.service import GenerationError, generate_diet
+from Menus.generator.service import MAX_DAY_ATTEMPTS, GenerationError, generate_diet
 from Menus.models import Menu, MenuIntake
-from Products.models import Product, ProductExcluded
+from Products.models import Product, ProductExcluded, ProductMicronutrient
 from Users.models import User
 
 
@@ -42,6 +46,12 @@ def make_dish(name, dish_type, product, quantity=200, user=None):
     dish = Dish.objects.create(name=name, recipe_elaboration='', language='es', dish_type=dish_type, user=user)
     DishProduct.objects.create(dish=dish, product=product, quantity=quantity)
     return dish
+
+
+def add_micronutrient(product, micro_name, value_per_100g):
+    ProductMicronutrient.objects.create(
+        product=product, micronutrient_id=MICRO_IDS[micro_name], value=value_per_100g,
+    )
 
 
 class DietGeneratorTests(TestCase):
@@ -165,6 +175,138 @@ class DietGeneratorTests(TestCase):
         rows = MenuIntake.objects.filter(menu=menu)
         self.assertEqual(rows.count(), 2)
         self.assertEqual(set(rows.values_list('menu_day', flat=True)), {0, 1})
+
+
+class MicronutrientRangesTests(TestCase):
+
+    def test_ranges_for_adult_male(self):
+        # make_client: birth_date=1990-01-01, gender='Male' -> adulto (rango 20-49).
+        client = make_client(make_nutri('nutri_ranges@example.com'))
+        ranges = ranges_for_client(client)
+
+        self.assertEqual(ranges[MICRO_IDS['calcio']], (1000, 2500))
+        self.assertEqual(ranges[MICRO_IDS['hierro']], (10, 30))
+        self.assertEqual(ranges[MICRO_IDS['fibra']], (38, None))
+        self.assertEqual(ranges[MICRO_IDS['sodio']], (None, 1000))
+
+    def test_ranges_differ_by_sex_for_iron(self):
+        client = make_client(make_nutri('nutri_ranges2@example.com'))
+        client.gender = 'Female'
+        client.save()
+
+        ranges = ranges_for_client(client)
+        self.assertEqual(ranges[MICRO_IDS['hierro']], (18, 40))
+
+
+class MicroFitnessPenaltyTests(TestCase):
+    """fitness() con micro_ranges: verifica que solo penaliza lo que cae
+    fuera de rango, sin tocar el termino de macros existente."""
+
+    def setUp(self):
+        self.candidate = DishCandidate(
+            dish_id=1, name='Test', kcal_100g=200, prot_100g=20, fat_100g=5, carb_100g=10,
+            micros_100g={
+                MICRO_IDS['calcio']: 50,   # 100g -> 50 en el dia, por debajo de cualquier minimo razonable
+                MICRO_IDS['vit_c']: 100,   # dentro de [60, 1800]
+            },
+        )
+        self.day_menu = {'single-1': {'single': (self.candidate, 100)}}
+        self.macro_target = NutritionTarget(kcal=200, prot_g=20, fat_g=5, carb_g=10)
+
+    def test_no_penalty_when_micro_ranges_empty(self):
+        score = fitness(self.day_menu, self.macro_target)
+        self.assertEqual(score, 0.0)
+
+    def test_penalty_only_for_out_of_range_micro(self):
+        target = NutritionTarget(
+            kcal=200, prot_g=20, fat_g=5, carb_g=10,
+            micro_ranges={
+                MICRO_IDS['calcio']: (1000, 2500),  # 50 esta muy por debajo -> penaliza
+                MICRO_IDS['vit_c']: (60, 1800),      # 100 esta dentro -> no penaliza
+            },
+        )
+        score = fitness(self.day_menu, target)
+
+        expected_calcium_penalty = ((1000 - 50) / 1000) ** 2
+        from Menus.generator.fitness import MICRO_PENALTY_WEIGHT
+        self.assertAlmostEqual(score, MICRO_PENALTY_WEIGHT * expected_calcium_penalty)
+
+
+class MicronutrientGuidedGATests(TestCase):
+    """El GA debe preferir, a igualdad de macros, el plato que ayuda a cubrir
+    un micronutriente que el target exige y del que el menu anda muy corto."""
+
+    def setUp(self):
+        self.nutri = make_nutri('nutri_micro_ga@example.com')
+        self.client_obj = make_client(self.nutri)
+
+        self.p_rich = make_product('Pollo con calcio', kcal=200, prot=30, fat=5, carb=0)
+        add_micronutrient(self.p_rich, 'calcio', 500)  # mucho calcio por 100g
+
+        self.p_poor = make_product('Pollo sin calcio', kcal=200, prot=30, fat=5, carb=0)
+        # sin ProductMicronutrient -> 0 calcio
+
+        self.dish_rich = make_dish('Pollo rico en calcio', Dish.DishType.MAIN, self.p_rich)
+        self.dish_poor = make_dish('Pollo sin calcio', Dish.DishType.MAIN, self.p_poor)
+
+        _, groups = get_meal_structure()
+        self.comida = groups['comida']
+        self.slot = MealSlotConfig(
+            key='group-comida', label='Comida', kind='group', intakes=self.comida,
+            include_starter=False, include_dessert=False,
+        )
+
+    def test_ga_prefers_dish_that_covers_deficient_micronutrient(self):
+        target = NutritionTarget(
+            kcal=800, prot_g=60, fat_g=25, carb_g=80,
+            micro_ranges={MICRO_IDS['calcio']: (2000, 2500)},
+        )
+        pools = build_candidate_pools(self.client_obj, self.nutri, [self.slot])
+        day, _history = generate_day(pools, [self.slot], target, None, pop_size=10, n_generations=25)
+
+        candidate, _qty = day[self.slot.key]['main']
+        self.assertEqual(candidate.dish_id, self.dish_rich.id)
+
+
+class DietGenerationRetryTests(TestCase):
+    """_generate_day_within_ranges: reintenta hasta MAX_DAY_ATTEMPTS veces
+    cuando el dia se sale de target.micro_ranges, y se queda con el de menor
+    fitness si ninguno entra en rango."""
+
+    def _config(self):
+        return DietConfig(
+            days=1, start_date=date(2026, 9, 1), meal_slots=[],
+            target=NutritionTarget(kcal=800, prot_g=60, fat_g=25, carb_g=80, micro_ranges={2: (10, 20)}),
+        )
+
+    @patch('Menus.generator.service.fitness')
+    @patch('Menus.generator.service.within_micro_ranges')
+    @patch('Menus.generator.service.generate_day')
+    def test_stops_at_first_day_within_range(self, mock_generate_day, mock_within_range, mock_fitness):
+        day_bad, day_ok = object(), object()
+        mock_generate_day.side_effect = [(day_bad, []), (day_ok, [])]
+        mock_within_range.side_effect = [False, True]
+        mock_fitness.return_value = 100
+
+        result = service._generate_day_within_ranges(pools={}, config=self._config(), rng=None)
+
+        self.assertIs(result, day_ok)
+        self.assertEqual(mock_generate_day.call_count, 2)
+
+    @patch('Menus.generator.service.fitness')
+    @patch('Menus.generator.service.within_micro_ranges')
+    @patch('Menus.generator.service.generate_day')
+    def test_keeps_best_scoring_day_after_max_attempts(self, mock_generate_day, mock_within_range, mock_fitness):
+        candidate_days = [object() for _ in range(MAX_DAY_ATTEMPTS)]
+        scores = [30, 10, 20, 40, 15]  # el mejor (mas bajo) es el indice 1
+        mock_generate_day.side_effect = [(day, []) for day in candidate_days]
+        mock_within_range.return_value = False
+        mock_fitness.side_effect = scores
+
+        result = service._generate_day_within_ranges(pools={}, config=self._config(), rng=None)
+
+        self.assertEqual(mock_generate_day.call_count, MAX_DAY_ATTEMPTS)
+        self.assertIs(result, candidate_days[1])
 
 
 class CreateDietViewTests(TestCase):
@@ -305,6 +447,91 @@ class EditMenuIntakeViewTests(TestCase):
         response = self.client.get(self._url())
         self.assertEqual(response.status_code, 404)
 
+    def test_post_marks_item_as_free_meal(self):
+        self.client.force_login(self.nutri)
+        response = self.client.post(
+            self._url(), data=json.dumps({'is_free_meal': True}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIsNone(data['dish_id'])
+        self.assertEqual(data['dish_name'], 'Comida libre')
+        self.assertTrue(data['is_free_meal'])
+        self.assertEqual(data['kcal'], 0.0)
+
+        self.item.refresh_from_db()
+        self.assertIsNone(self.item.dish_id)
+        self.assertEqual(self.item.quantity, 0)
+        self.assertEqual(self.item.kcal, Decimal('0.00'))
+        self.assertTrue(self.item.is_free_meal)
+
+    def test_get_reflects_free_meal_state(self):
+        self.item.dish = None
+        self.item.quantity = 0
+        self.item.kcal = Decimal('0.00')
+        self.item.is_free_meal = True
+        self.item.save(update_fields=['dish', 'quantity', 'kcal', 'is_free_meal'])
+
+        self.client.force_login(self.nutri)
+        response = self.client.get(self._url())
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIsNone(data['dish_id'])
+        self.assertTrue(data['is_free_meal'])
+        option_ids = {opt['id'] for opt in data['options']}
+        self.assertIn(self.dish_main.id, option_ids)
+
+    def test_post_can_switch_back_from_free_meal_to_a_dish(self):
+        self.item.dish = None
+        self.item.quantity = 0
+        self.item.kcal = Decimal('0.00')
+        self.item.is_free_meal = True
+        self.item.save(update_fields=['dish', 'quantity', 'kcal', 'is_free_meal'])
+
+        self.client.force_login(self.nutri)
+        response = self.client.post(
+            self._url(), data=json.dumps({'dish_id': self.dish_main.id, 'quantity': 100}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertFalse(data['is_free_meal'])
+
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.dish_id, self.dish_main.id)
+        self.assertFalse(self.item.is_free_meal)
+
+
+class DietDetailViewTests(TestCase):
+
+    def setUp(self):
+        self.nutri = make_nutri('nutri_detail@example.com')
+        self.client_obj = make_client(self.nutri)
+
+        _, groups = get_meal_structure()
+        main_intake = groups['comida']['main']
+
+        self.menu = Menu.objects.create(
+            user=self.nutri, client=self.client_obj,
+            date_ini=date(2026, 9, 1), date_fin=date(2026, 9, 1),
+        )
+        MenuIntake.objects.create(
+            menu=self.menu, dish=None, intake=main_intake,
+            quantity=0, kcal=Decimal('0.00'), menu_day=0,
+            intake_alias='Plato principal - Comida', is_free_meal=True,
+        )
+
+    def test_renders_free_meal_item_without_error(self):
+        self.client.force_login(self.nutri)
+        response = self.client.get(reverse('diet_detail', args=[self.client_obj.id, self.menu.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Comida libre')
+
 
 class DeleteMenuViewTests(TestCase):
 
@@ -391,6 +618,21 @@ class RegenerateMenuViewTests(TestCase):
         new_item = MenuIntake.objects.get(menu=new_menu, menu_day=0, intake_alias='Plato principal - Comida')
         self.assertEqual(new_item.dish_id, self.dish_main.id)
         self.assertEqual(new_item.quantity, 33)
+
+    def test_regenerate_skips_locked_free_meal_item_without_error(self):
+        self.item.dish = None
+        self.item.quantity = 0
+        self.item.kcal = Decimal('0.00')
+        self.item.is_free_meal = True
+        self.item.save(update_fields=['dish', 'quantity', 'kcal', 'is_free_meal'])
+
+        self.client.force_login(self.nutri)
+        response = self.client.post(self._url(), {'locked_items': [self.item.id]})
+
+        new_menu = Menu.objects.get(client=self.client_obj)
+        self.assertRedirects(response, reverse('diet_detail', args=[self.client_obj.id, new_menu.id]))
+        new_item = MenuIntake.objects.get(menu=new_menu, menu_day=0, intake_alias='Plato principal - Comida')
+        self.assertIsNotNone(new_item.dish_id)  # se regenero como toma normal, no se mantuvo libre
 
     def test_regenerate_without_config_uses_menu_daily_kcal_as_target(self):
         # Simula una dieta antigua sin generation_config, cuyo objetivo real

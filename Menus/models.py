@@ -26,12 +26,15 @@ class Menu(models.Model):
         
 class MenuIntake(models.Model):
     menu = models.ForeignKey(Menu, on_delete=models.CASCADE)
-    dish = models.ForeignKey(Dish, on_delete=models.CASCADE)
+    dish = models.ForeignKey(Dish, on_delete=models.CASCADE, null=True, blank=True)
     intake = models.ForeignKey(Intake, on_delete=models.CASCADE)
     quantity = models.IntegerField()
     kcal = models.DecimalField(max_digits=10, decimal_places=2)
     menu_day = models.IntegerField()
     intake_alias = models.CharField(max_length=200)
+    # Toma sin plato asignado: el cliente come lo que quiera, no aporta
+    # kcal/macros al total del dia (dish=None, quantity=0, kcal=0).
+    is_free_meal = models.BooleanField(default=False)
     
     class Meta:
         db_table = 'menu_intake'

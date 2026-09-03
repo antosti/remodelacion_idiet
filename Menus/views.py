@@ -21,7 +21,7 @@ from Menus.generator.meal_structure import get_meal_structure
 from Menus.generator.persistence import persist_generated_diet
 from Menus.generator.pools import ROLE_TO_DISH_TYPES, _to_candidate
 from Menus.generator.service import GenerationError, generate_diet
-from Menus.generator.targets import default_target_for_client, macro_split_for_kcal
+from Menus.generator.targets import attach_micro_ranges, default_target_for_client, macro_split_for_kcal
 from Menus.models import Menu, MenuIntake
 from Products.models import ProductExcluded
 
@@ -100,6 +100,7 @@ def build_diet_config_from_post(post, client, standalone, groups):
         target.fat_g = advanced_fat
     if advanced_carb is not None:
         target.carb_g = advanced_carb
+    attach_micro_ranges(target, client)
 
     portion_size = None
     if post.get('limit_portion') == 'on':
@@ -237,9 +238,9 @@ def _infer_target_from_menu(menu, client):
     nutricionista tecleo un kcal/dia manual al crearla)."""
     day_totals = MenuIntake.objects.filter(menu=menu).values('menu_day').annotate(total=Sum('kcal'))
     if not day_totals:
-        return default_target_for_client(client)
+        return attach_micro_ranges(default_target_for_client(client), client)
     avg_kcal = sum(float(row['total']) for row in day_totals) / len(day_totals)
-    return macro_split_for_kcal(avg_kcal)
+    return attach_micro_ranges(macro_split_for_kcal(avg_kcal), client)
 
 
 def _config_for_regenerate(menu, client):
@@ -291,11 +292,14 @@ def diet_detail(request, client_id, menu_id):
     cells = {}
     day_totals = {}
     for item in intakes:
-        nutrition = nutrition_for(item.dish)
-        totals_for_item = _intake_nutrition(nutrition, item.quantity)
-        item.prot_total = totals_for_item['prot']
-        item.fat_total = totals_for_item['fat']
-        item.carb_total = totals_for_item['carb']
+        if item.dish_id is None:
+            item.prot_total = item.fat_total = item.carb_total = Decimal('0')
+        else:
+            nutrition = nutrition_for(item.dish)
+            totals_for_item = _intake_nutrition(nutrition, item.quantity)
+            item.prot_total = totals_for_item['prot']
+            item.fat_total = totals_for_item['fat']
+            item.carb_total = totals_for_item['carb']
 
         cells[(item.menu_day, item.intake_alias)] = item
 
@@ -360,7 +364,7 @@ def edit_menu_intake(request, client_id, menu_id, item_id):
     item = get_object_or_404(MenuIntake.objects.select_related('dish', 'intake'), id=item_id, menu=menu)
 
     dish_options = list(_dish_options_for_intake(client, request.user, item.intake))
-    if not any(dish.id == item.dish_id for dish in dish_options):
+    if item.dish_id is not None and not any(dish.id == item.dish_id for dish in dish_options):
         dish_options = [item.dish] + dish_options
 
     if request.method == 'POST':
@@ -368,6 +372,29 @@ def edit_menu_intake(request, client_id, menu_id, item_id):
             payload = json.loads(request.body)
         except (TypeError, ValueError):
             return JsonResponse({'error': 'Datos inválidos.'}, status=400)
+
+        if payload.get('is_free_meal'):
+            item.dish = None
+            item.quantity = 0
+            item.kcal = Decimal('0')
+            item.is_free_meal = True
+            item.save(update_fields=['dish', 'quantity', 'kcal', 'is_free_meal'])
+
+            day_kcal = MenuIntake.objects.filter(menu=menu, menu_day=item.menu_day).aggregate(
+                total=Sum('kcal'),
+            )['total'] or Decimal('0')
+
+            return JsonResponse({
+                'dish_id': None,
+                'dish_name': 'Comida libre',
+                'is_free_meal': True,
+                'quantity': 0,
+                'kcal': 0.0,
+                'prot': 0.0,
+                'fat': 0.0,
+                'carb': 0.0,
+                'day_kcal': float(day_kcal),
+            })
 
         try:
             quantity = int(payload.get('quantity'))
@@ -390,7 +417,8 @@ def edit_menu_intake(request, client_id, menu_id, item_id):
         item.dish = dish
         item.quantity = quantity
         item.kcal = totals['kcal']
-        item.save(update_fields=['dish', 'quantity', 'kcal'])
+        item.is_free_meal = False
+        item.save(update_fields=['dish', 'quantity', 'kcal', 'is_free_meal'])
 
         day_kcal = MenuIntake.objects.filter(menu=menu, menu_day=item.menu_day).aggregate(
             total=Sum('kcal'),
@@ -399,6 +427,7 @@ def edit_menu_intake(request, client_id, menu_id, item_id):
         return JsonResponse({
             'dish_id': dish.id,
             'dish_name': dish.name,
+            'is_free_meal': False,
             'quantity': quantity,
             'kcal': float(totals['kcal']),
             'prot': float(totals['prot']),
@@ -410,6 +439,7 @@ def edit_menu_intake(request, client_id, menu_id, item_id):
     return JsonResponse({
         'dish_id': item.dish_id,
         'quantity': item.quantity,
+        'is_free_meal': item.is_free_meal,
         'options': [{'id': dish.id, 'name': dish.name} for dish in dish_options],
     })
 
@@ -456,6 +486,10 @@ def regenerate_menu(request, client_id, menu_id):
         return redirect('diet_detail', client_id=client.id, menu_id=menu.id)
 
     for item in locked_items:
+        if item.dish_id is None:
+            # Toma libre (sin plato): no hay DishCandidate equivalente, no se
+            # puede bloquear/mantener al rehacer. Se regenera como una toma normal.
+            continue
         slot_role = alias_to_slot_role.get(item.intake_alias)
         if not slot_role:
             continue

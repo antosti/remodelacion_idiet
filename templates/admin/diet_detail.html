@@ -74,7 +74,7 @@
                     <tbody>
                         {% for row in week.rows %}
                         <tr class="border-b border-gray-100 last:border-b-0">
-                            <th class="px-3 py-3 text-left text-xs font-semibold text-gray-600 align-top whitespace-nowrap">
+                            <th class="row-lock-toggle px-3 py-3 text-left text-xs font-semibold text-gray-600 align-top whitespace-nowrap select-none">
                                 {{ row.alias }}
                             </th>
                             {% for cell in row.cells %}
@@ -87,6 +87,11 @@
                                 {% if cell.item %}
                                 <input type="checkbox" name="locked_items" value="{{ cell.item.id }}" class="lock-checkbox hidden">
                                 <span class="lock-badge hidden absolute top-1 right-1 text-idiet" title="Se mantendrá al rehacer">🔒</span>
+                                {% if cell.item.is_free_meal %}
+                                <div class="text-gray-500 font-medium italic" data-field="dish-name">Comida libre</div>
+                                <div class="mt-1 text-xs text-gray-400" data-field="quantity-kcal"></div>
+                                <div class="text-xs text-gray-400" data-field="macros"></div>
+                                {% else %}
                                 <div class="text-gray-700 font-medium" data-field="dish-name">{{ cell.item.dish.name }}</div>
                                 <div class="mt-1 text-xs text-gray-400" data-field="quantity-kcal">
                                     {{ cell.item.quantity }} g · {{ cell.item.kcal|floatformat:0 }} kcal
@@ -94,6 +99,7 @@
                                 <div class="text-xs text-gray-400" data-field="macros">
                                     P {{ cell.item.prot_total }}g · G {{ cell.item.fat_total }}g · H {{ cell.item.carb_total }}g
                                 </div>
+                                {% endif %}
                                 {% endif %}
                             </td>
                             {% endfor %}
@@ -142,6 +148,13 @@
             <div class="flex items-center justify-between">
                 <h3 id="edit-intake-alias" class="text-lg font-semibold text-gray-700"></h3>
                 <button type="button" id="edit-intake-close" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <input type="checkbox" id="edit-intake-free-meal" class="rounded border-gray-300">
+                <label for="edit-intake-free-meal" class="text-sm font-medium text-gray-700">
+                    Comida libre (sin plato ni datos nutricionales)
+                </label>
             </div>
 
             <div>

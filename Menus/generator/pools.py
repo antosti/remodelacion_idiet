@@ -1,11 +1,14 @@
+from collections import defaultdict
+
 from django.db.models import Q
 
 from Dishes.models import Dish, DishCategorySize
 from Dishes.views import calculate_dish_nutrition
 from FoodGroup.models import FoodGroupExcluded
 from idiet.permissions import is_admin_user
-from Products.models import ProductExcluded
+from Products.models import ProductExcluded, ProductMicronutrient
 from Menus.generator.domain import DishCandidate
+from Menus.generator.micronutrients import MICRO_IDS
 
 ROLE_TO_DISH_TYPES = {
     'single': [Dish.DishType.MAIN, Dish.DishType.SINGLE],
@@ -15,8 +18,41 @@ ROLE_TO_DISH_TYPES = {
 }
 
 
-def _to_candidate(dish, portion_grams):
+def _product_micro_map(product_ids):
+    """dict[product_id][micronutrient_id] -> value (por 100g de producto)."""
+    product_micro_map = defaultdict(dict)
+    for pm in ProductMicronutrient.objects.filter(
+        product_id__in=product_ids, micronutrient_id__in=MICRO_IDS.values()
+    ):
+        product_micro_map[pm.product_id][pm.micronutrient_id] = pm.value
+    return product_micro_map
+
+
+def _dish_micros_100g(dish, product_micro_map):
+    """Mismo patron que calculate_dish_nutrition (Dishes/views.py) pero
+    agregando micronutrientes de ProductMicronutrient en vez de macros."""
+    total_quantity = 0
+    totals = defaultdict(float)
+
+    for dish_product in dish.dishproduct_set.all():
+        quantity = dish_product.quantity or 0
+        total_quantity += quantity
+        for micro_id, value in product_micro_map.get(dish_product.product_id, {}).items():
+            totals[micro_id] += float(value) * quantity / 100
+
+    if total_quantity == 0:
+        return {}
+
+    return {micro_id: value / total_quantity * 100 for micro_id, value in totals.items()}
+
+
+def _to_candidate(dish, portion_grams, product_micro_map=None):
     nutrition = calculate_dish_nutrition(dish)
+
+    if product_micro_map is None:
+        product_ids = [dp.product_id for dp in dish.dishproduct_set.all()]
+        product_micro_map = _product_micro_map(product_ids)
+
     return DishCandidate(
         dish_id=dish.id,
         name=dish.name,
@@ -25,6 +61,7 @@ def _to_candidate(dish, portion_grams):
         fat_100g=float(nutrition['fat_100g']),
         carb_100g=float(nutrition['carbs_100g']),
         portion_grams=portion_grams,
+        micros_100g=_dish_micros_100g(dish, product_micro_map),
     )
 
 
@@ -89,8 +126,15 @@ def build_candidate_pools(client, user, meal_slots, portion_size=None):
         known_sizes = [float(d.dish_category_size.quantity) for d in dishes if d.dish_category_size]
         fallback_portion_grams = sum(known_sizes) / len(known_sizes) if known_sizes else None
 
+        product_ids = {
+            dish_product.product_id
+            for dish in dishes
+            for dish_product in dish.dishproduct_set.all()
+        }
+        product_micro_map = _product_micro_map(product_ids)
+
         return [
-            _to_candidate(dish, resolve_portion(dish, fallback_portion_grams))
+            _to_candidate(dish, resolve_portion(dish, fallback_portion_grams), product_micro_map)
             for dish in dishes
         ]
 

@@ -48,3 +48,14 @@ def default_target_for_client(client):
         kcal = bmr * factor
 
     return macro_split_for_kcal(kcal)
+
+
+def attach_micro_ranges(target, client):
+    """Calcula y asigna target.micro_ranges a partir del cliente (ver
+    Menus.generator.micronutrients.ranges_for_client). Import diferido para
+    evitar el ciclo targets <-> micronutrients (micronutrients reutiliza
+    compute_age de este modulo)."""
+    from Menus.generator.micronutrients import ranges_for_client
+
+    target.micro_ranges = ranges_for_client(client)
+    return target

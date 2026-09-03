@@ -10,7 +10,19 @@ document.addEventListener('DOMContentLoaded', function () {
     const aliasLabel = document.getElementById('edit-intake-alias');
     const dishSelect = document.getElementById('edit-intake-dish');
     const quantityInput = document.getElementById('edit-intake-quantity');
+    const freeMealCheckbox = document.getElementById('edit-intake-free-meal');
     const errorLabel = document.getElementById('edit-intake-error');
+
+    function applyFreeMealState(isFree) {
+        dishSelect.disabled = isFree;
+        quantityInput.disabled = isFree;
+    }
+
+    if (freeMealCheckbox) {
+        freeMealCheckbox.addEventListener('change', function () {
+            applyFreeMealState(freeMealCheckbox.checked);
+        });
+    }
 
     let activeCell = null;
     let lockMode = false;
@@ -37,6 +49,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (badge) badge.classList.add('hidden');
                 cell.classList.remove('ring-2', 'ring-idiet', 'bg-idiet/10');
             }
+        });
+        document.querySelectorAll('.row-lock-toggle').forEach(function (rowHeader) {
+            rowHeader.classList.toggle('cursor-pointer', active);
+            rowHeader.classList.toggle('hover:bg-idiet/5', active);
+            rowHeader.title = active ? 'Bloquear/desbloquear toda la fila' : '';
         });
         if (regenerateBanner) regenerateBanner.classList.toggle('hidden', !active);
         if (regenerateToggleBtn) regenerateToggleBtn.textContent = active ? 'Salir del modo bloqueo' : 'Rehacer menú';
@@ -81,19 +98,51 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    function toggleCellLock(cell) {
+    function setCellLock(cell, locked) {
         const checkbox = cell.querySelector('.lock-checkbox');
         const badge = cell.querySelector('.lock-badge');
+        if (!checkbox || checkbox.checked === locked) {
+            return;
+        }
+        checkbox.checked = locked;
+        cell.classList.toggle('ring-2', locked);
+        cell.classList.toggle('ring-idiet', locked);
+        cell.classList.toggle('bg-idiet/10', locked);
+        if (badge) badge.classList.toggle('hidden', !locked);
+    }
+
+    function toggleCellLock(cell) {
+        const checkbox = cell.querySelector('.lock-checkbox');
         if (!checkbox) {
             return;
         }
-        checkbox.checked = !checkbox.checked;
-        cell.classList.toggle('ring-2', checkbox.checked);
-        cell.classList.toggle('ring-idiet', checkbox.checked);
-        cell.classList.toggle('bg-idiet/10', checkbox.checked);
-        if (badge) badge.classList.toggle('hidden', !checkbox.checked);
+        setCellLock(cell, !checkbox.checked);
         updateLockCount();
     }
+
+    function toggleRowLock(rowHeader) {
+        const row = rowHeader.closest('tr');
+        const cells = row ? Array.from(row.querySelectorAll('.lock-cell[data-edit-url]')) : [];
+        if (!cells.length) {
+            return;
+        }
+        const allLocked = cells.every(function (cell) {
+            const checkbox = cell.querySelector('.lock-checkbox');
+            return checkbox && checkbox.checked;
+        });
+        cells.forEach(function (cell) {
+            setCellLock(cell, !allLocked);
+        });
+        updateLockCount();
+    }
+
+    document.querySelectorAll('.row-lock-toggle').forEach(function (rowHeader) {
+        rowHeader.addEventListener('click', function () {
+            if (lockMode) {
+                toggleRowLock(rowHeader);
+            }
+        });
+    });
 
     function csrfToken() {
         const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
@@ -111,6 +160,8 @@ document.addEventListener('DOMContentLoaded', function () {
         aliasLabel.textContent = cell.dataset.intakeAlias || 'Editar toma';
         dishSelect.innerHTML = '<option>Cargando…</option>';
         quantityInput.value = '';
+        if (freeMealCheckbox) freeMealCheckbox.checked = false;
+        applyFreeMealState(false);
         modal.classList.remove('hidden');
 
         fetch(cell.dataset.editUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
@@ -132,6 +183,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     dishSelect.appendChild(el);
                 });
                 quantityInput.value = data.quantity;
+                if (freeMealCheckbox) freeMealCheckbox.checked = !!data.is_free_meal;
+                applyFreeMealState(!!data.is_free_meal);
             })
             .catch(function (err) {
                 showError(err.message);
@@ -167,10 +220,17 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         errorLabel.classList.add('hidden');
 
-        const quantity = parseInt(quantityInput.value, 10);
-        if (!quantity || quantity <= 0) {
-            showError('Indica una cantidad válida.');
-            return;
+        const isFreeMeal = !!(freeMealCheckbox && freeMealCheckbox.checked);
+        let payload;
+        if (isFreeMeal) {
+            payload = { is_free_meal: true };
+        } else {
+            const quantity = parseInt(quantityInput.value, 10);
+            if (!quantity || quantity <= 0) {
+                showError('Indica una cantidad válida.');
+                return;
+            }
+            payload = { is_free_meal: false, dish_id: dishSelect.value, quantity: quantity };
         }
 
         const cell = activeCell;
@@ -184,7 +244,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 'X-CSRFToken': csrfToken(),
                 'X-Requested-With': 'XMLHttpRequest',
             },
-            body: JSON.stringify({ dish_id: dishSelect.value, quantity: quantity }),
+            body: JSON.stringify(payload),
         })
             .then(function (resp) {
                 return resp.json().then(function (data) {
@@ -196,10 +256,15 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .then(function (data) {
                 cell.querySelector('[data-field="dish-name"]').textContent = data.dish_name;
-                cell.querySelector('[data-field="quantity-kcal"]').textContent =
-                    data.quantity + ' g · ' + Math.round(data.kcal) + ' kcal';
-                cell.querySelector('[data-field="macros"]').textContent =
-                    'P ' + data.prot + 'g · G ' + data.fat + 'g · H ' + data.carb + 'g';
+                if (data.is_free_meal) {
+                    cell.querySelector('[data-field="quantity-kcal"]').textContent = '';
+                    cell.querySelector('[data-field="macros"]').textContent = '';
+                } else {
+                    cell.querySelector('[data-field="quantity-kcal"]').textContent =
+                        data.quantity + ' g · ' + Math.round(data.kcal) + ' kcal';
+                    cell.querySelector('[data-field="macros"]').textContent =
+                        'P ' + data.prot + 'g · G ' + data.fat + 'g · H ' + data.carb + 'g';
+                }
 
                 const dayHeader = document.querySelector(
                     'th[data-day-index="' + cell.dataset.dayIndex + '"] [data-field="day-kcal"]'
