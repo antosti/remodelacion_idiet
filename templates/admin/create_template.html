@@ -1,0 +1,100 @@
+{% extends 'admin/layout.html' %}
+{% block title %} Nueva plantilla {% endblock %}
+{% load static %}
+
+{% block extra_js %}
+<script src="{% static 'js/create_template.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="w-full p-4 sm:p-6 bg-gray-50 rounded-2xl">
+    <div class="flex flex-col gap-2 px-2 mb-6 sm:flex-row sm:items-center sm:justify-between">
+        <h1 class="text-2xl font-bold text-gray-700">Nueva plantilla</h1>
+        <a href="{% url 'list_templates' %}" class="text-sm font-semibold text-idiet hover:text-idiet/80">
+            Atrás a la lista de plantillas
+        </a>
+    </div>
+
+    <form method="POST" class="space-y-6">
+        {% csrf_token %}
+
+        <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm space-y-4">
+            <h2 class="text-lg font-semibold text-gray-700">Datos generales</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                    <input type="text" name="name" required
+                        class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Kcal / día</label>
+                    <input type="number" name="daily_kcal" min="1" max="10000" required
+                        class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Duración (días)</label>
+                    <input type="number" name="duration" min="1" max="90" required
+                        class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm space-y-5">
+            <h2 class="text-lg font-semibold text-gray-700">Tomas del día</h2>
+
+            {% if standalone %}
+            <div>
+                <h3 class="text-sm font-semibold text-gray-600 mb-2">Tomas sencillas</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                    {% for intake in standalone %}
+                    <label class="flex items-center gap-3 rounded-lg border border-gray-200 px-3 py-2 hover:bg-gray-50">
+                        <input type="checkbox" name="standalone_intakes" value="{{ intake.id }}"
+                            class="rounded border-gray-300 text-secondary focus:ring-secondary/30">
+                        <span class="text-sm font-medium text-gray-700">{{ intake.name }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% for group_key, group in groups.items %}
+            <div class="rounded-lg border border-gray-200 p-4" data-meal-group="{{ group_key }}">
+                <label class="flex items-center gap-3 mb-3">
+                    <input type="checkbox" name="include_{{ group_key }}" data-meal-group-toggle
+                        class="rounded border-gray-300 text-secondary focus:ring-secondary/30">
+                    <span class="text-sm font-semibold text-gray-700 capitalize">Incluir {{ group_key }}</span>
+                </label>
+
+                <div data-meal-group-options class="hidden pl-7 space-y-3">
+                    {% if group.starter %}
+                    <div class="flex items-center gap-4">
+                        <label class="flex items-center gap-2 text-sm text-gray-700">
+                            <input type="radio" name="platos_{{ group_key }}" value="1" checked>
+                            1 plato
+                        </label>
+                        <label class="flex items-center gap-2 text-sm text-gray-700">
+                            <input type="radio" name="platos_{{ group_key }}" value="2">
+                            2 platos (entrante + principal)
+                        </label>
+                    </div>
+                    {% endif %}
+
+                    {% if group.dessert %}
+                    <label class="flex items-center gap-2 text-sm text-gray-700">
+                        <input type="checkbox" name="postre_{{ group_key }}" class="rounded border-gray-300 text-secondary focus:ring-secondary/30">
+                        Incluir postre
+                    </label>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="flex justify-end">
+            <button type="submit" class="px-5 py-2.5 rounded-lg bg-idiet text-white font-semibold hover:bg-idiet/90">
+                Crear plantilla
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

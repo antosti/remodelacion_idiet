@@ -120,6 +120,18 @@ DATABASES = {
         'HOST': os.environ.get('IDIET_TRAINING_DATABASE_HOST', os.environ.get('IDIET_DATABASE_HOST', 'localhost')),
         'PORT': os.environ.get('IDIET_TRAINING_DATABASE_PORT', os.environ.get('IDIET_DATABASE_PORT', '3306')),
     },
+    # Solo lectura, usada por los scripts de BBDD-Migration/ para leer la BD
+    # legacy en vivo. No forma parte de ALLOWED_DATABASE_ALIASES (db_context.py)
+    # asi que el router nunca la elige para las vistas ni para `migrate`.
+    'legacy': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': os.environ.get('IDIET_LEGACY_DATABASE_NAME', ''),
+        'USER': os.environ.get('IDIET_LEGACY_DATABASE_USER', 'root'),
+        'PASSWORD': os.environ.get('IDIET_LEGACY_DATABASE_PASSWORD', ''),
+        'HOST': os.environ.get('IDIET_LEGACY_DATABASE_HOST', 'localhost'),
+        'PORT': os.environ.get('IDIET_LEGACY_DATABASE_PORT', '3306'),
+        'OPTIONS': {'charset': 'utf8mb4'},
+    },
 }
 
 DATABASE_ROUTERS = ['idiet.db_router.EnvironmentDatabaseRouter']

@@ -63,6 +63,15 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Paso 3: mostrar el selector de plantilla solo si se marca "Usar plantilla existente".
+    const useTemplateCheckbox = document.getElementById('use-template-checkbox');
+    const templateSelectWrapper = document.getElementById('template-select-wrapper');
+    if (useTemplateCheckbox && templateSelectWrapper) {
+        useTemplateCheckbox.addEventListener('change', function () {
+            templateSelectWrapper.classList.toggle('hidden', !useTemplateCheckbox.checked);
+        });
+    }
+
     function fieldValue(name) {
         const field = form.querySelector('[name="' + name + '"]');
         return field ? field.value : '';
@@ -81,32 +90,48 @@ document.addEventListener('DOMContentLoaded', function () {
             const days = fieldValue('days') || '-';
             const startDate = fieldValue('start_date') || '-';
 
-            const meals = [];
-            form.querySelectorAll('[name="standalone_intakes"]:checked').forEach(function (input) {
-                const label = input.closest('label');
-                if (label) {
-                    meals.push(label.textContent.trim());
-                }
-            });
-            form.querySelectorAll('[data-meal-group-toggle]:checked').forEach(function (toggle) {
-                const group = toggle.closest('[data-meal-group]');
-                const groupKey = group ? group.dataset.mealGroup : '';
-                if (groupKey) {
-                    meals.push(groupKey.charAt(0).toUpperCase() + groupKey.slice(1));
-                }
-            });
-
-            const kcal = fieldValue('target_kcal');
-            const limitPortion = limitPortionCheckbox && limitPortionCheckbox.checked;
-            const portionSize = limitPortion ? fieldValue('portion_size') : null;
-
             summary.innerHTML = '';
-            const lines = [
-                'Duración: ' + days + ' día(s), desde ' + startDate,
-                'Tomas incluidas: ' + (meals.length ? meals.join(', ') : 'ninguna seleccionada'),
-                'Objetivo kcal/día: ' + (kcal || 'calculado automáticamente'),
-                'Tamaño de ración: ' + (limitPortion ? (portionSize || '-') : 'natural de cada plato'),
-            ];
+
+            const useTemplate = useTemplateCheckbox && useTemplateCheckbox.checked;
+            let lines;
+
+            if (useTemplate) {
+                const templateSelect = document.getElementById('template-select');
+                const selectedOption = templateSelect ? templateSelect.options[templateSelect.selectedIndex] : null;
+                const templateName = selectedOption ? selectedOption.textContent.trim() : '-';
+
+                lines = [
+                    'Fecha de inicio: ' + startDate,
+                    'Se creará a partir de la plantilla: ' + templateName,
+                ];
+            } else {
+                const meals = [];
+                form.querySelectorAll('[name="standalone_intakes"]:checked').forEach(function (input) {
+                    const label = input.closest('label');
+                    if (label) {
+                        meals.push(label.textContent.trim());
+                    }
+                });
+                form.querySelectorAll('[data-meal-group-toggle]:checked').forEach(function (toggle) {
+                    const group = toggle.closest('[data-meal-group]');
+                    const groupKey = group ? group.dataset.mealGroup : '';
+                    if (groupKey) {
+                        meals.push(groupKey.charAt(0).toUpperCase() + groupKey.slice(1));
+                    }
+                });
+
+                const kcal = fieldValue('target_kcal');
+                const limitPortion = limitPortionCheckbox && limitPortionCheckbox.checked;
+                const portionSize = limitPortion ? fieldValue('portion_size') : null;
+
+                lines = [
+                    'Duración: ' + days + ' día(s), desde ' + startDate,
+                    'Tomas incluidas: ' + (meals.length ? meals.join(', ') : 'ninguna seleccionada'),
+                    'Objetivo kcal/día: ' + (kcal || 'calculado automáticamente'),
+                    'Tamaño de ración: ' + (limitPortion ? (portionSize || '-') : 'natural de cada plato'),
+                ];
+            }
+
             lines.forEach(function (line) {
                 const p = document.createElement('p');
                 p.textContent = line;

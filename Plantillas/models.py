@@ -14,25 +14,30 @@ class Template(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     daily_kcal = models.IntegerField()
     duration = models.IntegerField()
-    
+    active = models.BooleanField(default=True)
+
     # Many to many relationship with Intakes
     intake = models.ManyToManyField(Intake, through='TemplateIntake')
-    
+
     def __str__(self):
         return self.name
-    
+
     class Meta:
         db_table = 'template'
-        
+
 class TemplateIntake(models.Model):
     template = models.ForeignKey(Template, on_delete=models.CASCADE)
-    dish = models.ForeignKey(Dish, on_delete=models.CASCADE)
+    dish = models.ForeignKey(Dish, on_delete=models.CASCADE, null=True, blank=True)
     intake = models.ForeignKey(Intake, on_delete=models.CASCADE)
     quantity = models.IntegerField()
     kcal = models.DecimalField(max_digits=10, decimal_places=2)
     menu_day = models.IntegerField()
     intake_alias = models.CharField(max_length=200)
-    
+    # Toma sin plato asignado: la plantilla queda incompleta hasta que se
+    # rellena o se marca explicitamente como comida libre (ver
+    # Menus.models.MenuIntake.is_free_meal, mismo patron).
+    is_free_meal = models.BooleanField(default=False)
+
     class Meta:
         db_table = 'template_intake'
 

@@ -18,11 +18,12 @@ from idiet.permissions import get_visible_client_or_404, scoped_queryset
 from Intakes.models import Intake
 from Menus.generator.domain import DietConfig, MealSlotConfig, ROLE_LABELS, deserialize_config
 from Menus.generator.meal_structure import get_meal_structure
-from Menus.generator.persistence import persist_generated_diet
+from Menus.generator.persistence import persist_generated_diet, persist_menu_from_template
 from Menus.generator.pools import ROLE_TO_DISH_TYPES, _to_candidate
 from Menus.generator.service import GenerationError, generate_diet
 from Menus.generator.targets import attach_micro_ranges, default_target_for_client, macro_split_for_kcal
 from Menus.models import Menu, MenuIntake
+from Plantillas.models import Template
 from Products.models import ProductExcluded
 
 logger = logging.getLogger('idiet.menus')
@@ -118,14 +119,49 @@ def build_diet_config_from_post(post, client, standalone, groups):
 def create_diet(request, id):
     client = get_visible_client_or_404(request.user, id=id)
     standalone, groups = get_meal_structure()
+    templates = scoped_queryset(Template.objects.filter(active=True), request.user).order_by('name')
 
     if request.method == 'POST':
+        if request.POST.get('use_template') == 'on':
+            template_id = _parse_int(request.POST.get('template_id'))
+            try:
+                start_date = date.fromisoformat(request.POST.get('start_date', ''))
+            except ValueError:
+                start_date = None
+
+            if not template_id or start_date is None:
+                messages.error(request, 'Selecciona una plantilla y una fecha de inicio válidas.')
+                return render(request, 'admin/create_diet_wizard.html', {
+                    'client': client, 'standalone': standalone, 'groups': groups, 'templates': templates,
+                })
+
+            template = get_object_or_404(
+                scoped_queryset(Template.objects.filter(active=True), request.user), id=template_id,
+            )
+
+            try:
+                persist_menu_from_template(request.user, client, template, start_date)
+            except GenerationError as exc:
+                messages.error(request, str(exc))
+                return render(request, 'admin/create_diet_wizard.html', {
+                    'client': client, 'standalone': standalone, 'groups': groups, 'templates': templates,
+                })
+            except Exception:
+                logger.exception('Error creando dieta desde plantilla para cliente %s', client.id)
+                messages.error(request, 'Error inesperado al crear la dieta desde la plantilla. Inténtelo de nuevo.')
+                return render(request, 'admin/create_diet_wizard.html', {
+                    'client': client, 'standalone': standalone, 'groups': groups, 'templates': templates,
+                })
+
+            messages.success(request, 'Dieta creada a partir de la plantilla correctamente.')
+            return redirect('client_detail', id=client.id)
+
         try:
             config = build_diet_config_from_post(request.POST, client, standalone, groups)
         except ValueError as exc:
             messages.error(request, str(exc))
             return render(request, 'admin/create_diet_wizard.html', {
-                'client': client, 'standalone': standalone, 'groups': groups,
+                'client': client, 'standalone': standalone, 'groups': groups, 'templates': templates,
             })
 
         try:
@@ -134,13 +170,13 @@ def create_diet(request, id):
         except GenerationError as exc:
             messages.error(request, str(exc))
             return render(request, 'admin/create_diet_wizard.html', {
-                'client': client, 'standalone': standalone, 'groups': groups,
+                'client': client, 'standalone': standalone, 'groups': groups, 'templates': templates,
             })
         except Exception:
             logger.exception('Error generando dieta para cliente %s', client.id)
             messages.error(request, 'Error inesperado al generar la dieta. Inténtelo de nuevo.')
             return render(request, 'admin/create_diet_wizard.html', {
-                'client': client, 'standalone': standalone, 'groups': groups,
+                'client': client, 'standalone': standalone, 'groups': groups, 'templates': templates,
             })
 
         messages.success(request, 'Dieta generada correctamente.')
@@ -150,6 +186,7 @@ def create_diet(request, id):
         'client': client,
         'standalone': standalone,
         'groups': groups,
+        'templates': templates,
     })
 
 
@@ -441,6 +478,49 @@ def edit_menu_intake(request, client_id, menu_id, item_id):
         'quantity': item.quantity,
         'is_free_meal': item.is_free_meal,
         'options': [{'id': dish.id, 'name': dish.name} for dish in dish_options],
+    })
+
+
+@login_required
+@require_http_methods(['GET'])
+def copy_menu_intake(request, client_id, menu_id, item_id):
+    """Copiar una toma (plato + cantidad + estado de comida libre) para
+    pegarla en otras celdas de la misma dieta. Devuelve el estado a copiar
+    y los ids de MenuIntake que son destinos válidos, usando la misma regla
+    de compatibilidad que la reasignación manual de plato
+    (_dish_options_for_intake), calculada una vez por Intake distinta
+    realmente usada en la dieta para evitar repetir la consulta por celda."""
+    client = get_visible_client_or_404(request.user, id=client_id)
+    menu = get_object_or_404(Menu, id=menu_id, client=client)
+    item = get_object_or_404(MenuIntake.objects.select_related('dish', 'intake'), id=item_id, menu=menu)
+
+    other_items = list(MenuIntake.objects.filter(menu=menu).exclude(id=item.id).select_related('intake'))
+
+    if item.is_free_meal or item.dish_id is None:
+        return JsonResponse({
+            'dish_id': None,
+            'dish_name': 'Comida libre',
+            'quantity': 0,
+            'is_free_meal': True,
+            'target_ids': [other.id for other in other_items],
+        })
+
+    distinct_intakes = {}
+    for other in other_items:
+        distinct_intakes.setdefault(other.intake_id, other.intake)
+
+    compatible_intake_ids = {
+        intake_id
+        for intake_id, intake in distinct_intakes.items()
+        if _dish_options_for_intake(client, request.user, intake).filter(pk=item.dish_id).exists()
+    }
+
+    return JsonResponse({
+        'dish_id': item.dish_id,
+        'dish_name': item.dish.name,
+        'quantity': item.quantity,
+        'is_free_meal': False,
+        'target_ids': [other.id for other in other_items if other.intake_id in compatible_intake_ids],
     })
 
 

@@ -18,7 +18,8 @@ def _micro_range_penalty(value, lo, hi):
     """0 si `value` cae dentro de [lo, hi] (alguno puede ser None); si no,
     error cuadratico relativo a la frontera superada. A diferencia de
     _sq_rel_error, no penaliza valores ya dentro de rango: el objetivo es un
-    intervalo, no un punto."""
+    intervalo, no un punto. Solo se usa para decidir si un dia es aceptable
+    (within_micro_ranges), no para guiar al GA (ver _micro_center_penalty)."""
     if lo is not None and value < lo:
         return ((lo - value) / lo) ** 2
     if hi is not None and value > hi:
@@ -26,7 +27,39 @@ def _micro_range_penalty(value, lo, hi):
     return 0.0
 
 
-def _micro_penalty(day_menu, micro_ranges):
+# Para rangos abiertos por un lado (fibra: solo minimo; colesterol/sodio:
+# solo maximo), tirar exactamente del unico extremo definido empuja el valor
+# justo al borde -- con la variabilidad propia del GA eso lo cruza la mitad
+# de las veces (probado: colesterol paso de 55% a 100% fuera de rango al
+# tirar exactamente de su maximo, 100mg). En vez de eso se apunta a un
+# margen de seguridad dentro del lado bueno del rango: 20% por encima del
+# minimo, o 20% por debajo del maximo.
+OPEN_RANGE_SAFETY_MARGIN = 0.2
+
+
+def _micro_target(lo, hi):
+    """Valor de referencia de un micronutriente: el punto medio de [lo, hi]
+    si ambos extremos existen (puerto de total_f_fitness_micros en
+    nubu_generator/fitness_functions.py, que siempre compara contra un unico
+    optimal -- ahi el punto medio -- en vez de contra un intervalo), o un
+    margen de seguridad dentro del unico extremo definido si el rango es
+    abierto por el otro lado (ver OPEN_RANGE_SAFETY_MARGIN)."""
+    if lo is None:
+        return hi * (1 - OPEN_RANGE_SAFETY_MARGIN)
+    if hi is None:
+        return lo * (1 + OPEN_RANGE_SAFETY_MARGIN)
+    return (lo + hi) / 2
+
+
+def _micro_center_penalty(day_menu, micro_ranges):
+    totals = day_micro_totals(day_menu)
+    return sum(
+        _sq_rel_error(totals.get(micro_id, 0.0), _micro_target(lo, hi))
+        for micro_id, (lo, hi) in micro_ranges.items()
+    )
+
+
+def _micro_boundary_penalty(day_menu, micro_ranges):
     totals = day_micro_totals(day_menu)
     return sum(
         _micro_range_penalty(totals.get(micro_id, 0.0), lo, hi)
@@ -40,7 +73,7 @@ def within_micro_ranges(day_menu, micro_ranges):
     por Menus.generator.service para decidir si hace falta regenerar el dia."""
     if not micro_ranges:
         return True
-    return _micro_penalty(day_menu, micro_ranges) == 0.0
+    return _micro_boundary_penalty(day_menu, micro_ranges) == 0.0
 
 
 def fitness(day_menu, target):
@@ -56,5 +89,5 @@ def fitness(day_menu, target):
         + 15 * _sq_rel_error(prot, target.prot_g)
     )
     if target.micro_ranges:
-        score += MICRO_PENALTY_WEIGHT * _micro_penalty(day_menu, target.micro_ranges)
+        score += MICRO_PENALTY_WEIGHT * _micro_center_penalty(day_menu, target.micro_ranges)
     return score

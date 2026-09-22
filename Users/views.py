@@ -53,9 +53,9 @@ def login_view(request):
             )
 
             if user is not None:
+                login(request, user)
                 request.session["database_environment"] = database_alias
                 request.database_alias = database_alias
-                login(request, user)
                 logger.info("Login correcto: email=%s entorno=%s", email, selected_environment)
                 messages.success(request, "Inicio de sesión correcto")
                 return redirect("admin-home")
@@ -135,7 +135,10 @@ def password_reset_confirm(request, uidb64, token):
     user = None
     if alias and pk:
         with use_database(alias):
-            candidate = User.objects.filter(pk=pk).first()
+            try:
+                candidate = User.objects.filter(pk=pk).first()
+            except (ValueError, OverflowError):
+                candidate = None
             if candidate is not None and default_token_generator.check_token(candidate, token):
                 user = candidate
 

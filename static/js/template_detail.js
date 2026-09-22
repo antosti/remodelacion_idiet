@@ -26,15 +26,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     let activeCell = null;
-    let lockMode = false;
     let pasteMode = false;
     let clipboard = null;
-
-    const regenerateToggleBtn = document.getElementById('regenerate-toggle-btn');
-    const regenerateBanner = document.getElementById('regenerate-banner');
-    const regenerateCancelBtn = document.getElementById('regenerate-cancel-btn');
-    const regenerateConfirmBtn = document.getElementById('regenerate-confirm-btn');
-    const regenerateCount = document.getElementById('regenerate-count');
 
     const pasteBanner = document.getElementById('paste-banner');
     const pasteCancelBtn = document.getElementById('paste-cancel-btn');
@@ -42,52 +35,19 @@ document.addEventListener('DOMContentLoaded', function () {
     const pasteTargetCount = document.getElementById('paste-target-count');
     const pasteError = document.getElementById('paste-error');
 
-    function updateLockCount() {
-        if (regenerateCount) {
-            regenerateCount.textContent = document.querySelectorAll('.lock-checkbox:checked').length;
-        }
-    }
-
-    function setLockMode(active) {
-        if (active && pasteMode) {
-            setPasteMode(false);
-        }
-        lockMode = active;
-        document.querySelectorAll('.lock-cell').forEach(function (cell) {
-            if (!active) {
-                const checkbox = cell.querySelector('.lock-checkbox');
-                const badge = cell.querySelector('.lock-badge');
-                if (checkbox) checkbox.checked = false;
-                if (badge) badge.classList.add('hidden');
-                cell.classList.remove('ring-2', 'ring-idiet', 'bg-idiet/10');
-            }
-        });
-        document.querySelectorAll('.row-lock-toggle').forEach(function (rowHeader) {
-            rowHeader.classList.toggle('cursor-pointer', active);
-            rowHeader.classList.toggle('hover:bg-idiet/5', active);
-            rowHeader.title = active ? 'Bloquear/desbloquear toda la fila' : '';
-        });
-        if (regenerateBanner) regenerateBanner.classList.toggle('hidden', !active);
-        if (regenerateToggleBtn) regenerateToggleBtn.textContent = active ? 'Salir del modo bloqueo' : 'Rehacer menú';
-        updateLockCount();
-    }
-
     function clearPasteHighlights() {
-        document.querySelectorAll('.lock-cell[data-item-id]').forEach(function (cell) {
+        document.querySelectorAll('[data-item-id]').forEach(function (cell) {
             cell.classList.remove('ring-2', 'ring-emerald-500', 'bg-emerald-50', 'opacity-40');
         });
     }
 
     function setPasteMode(active) {
-        if (active && lockMode) {
-            setLockMode(false);
-        }
         pasteMode = active;
 
         if (active && clipboard) {
             if (pasteDishName) pasteDishName.textContent = clipboard.dishName;
             if (pasteTargetCount) pasteTargetCount.textContent = clipboard.targetIds.size;
-            document.querySelectorAll('.lock-cell[data-item-id]').forEach(function (cell) {
+            document.querySelectorAll('[data-item-id]').forEach(function (cell) {
                 const isTarget = clipboard.targetIds.has(cell.dataset.itemId);
                 cell.classList.toggle('ring-2', isTarget);
                 cell.classList.toggle('ring-emerald-500', isTarget);
@@ -105,90 +65,6 @@ document.addEventListener('DOMContentLoaded', function () {
             if (pasteBanner) pasteBanner.classList.add('hidden');
         }
     }
-
-    if (regenerateToggleBtn) {
-        regenerateToggleBtn.addEventListener('click', function () {
-            setLockMode(!lockMode);
-        });
-    }
-    if (regenerateCancelBtn) {
-        regenerateCancelBtn.addEventListener('click', function () {
-            setLockMode(false);
-        });
-    }
-    const regenerateConfirmModal = document.getElementById('regenerate-confirm-modal');
-    const regenerateModalCancel = document.getElementById('regenerate-modal-cancel');
-    const regenerateModalConfirm = document.getElementById('regenerate-modal-confirm');
-    const regenerateForm = document.getElementById('regenerate-form');
-
-    if (regenerateConfirmBtn && regenerateConfirmModal) {
-        regenerateConfirmBtn.addEventListener('click', function () {
-            regenerateConfirmModal.classList.remove('hidden');
-        });
-    }
-    if (regenerateModalCancel) {
-        regenerateModalCancel.addEventListener('click', function () {
-            regenerateConfirmModal.classList.add('hidden');
-        });
-    }
-    if (regenerateConfirmModal) {
-        regenerateConfirmModal.addEventListener('click', function (evt) {
-            if (evt.target === regenerateConfirmModal) {
-                regenerateConfirmModal.classList.add('hidden');
-            }
-        });
-    }
-    if (regenerateModalConfirm && regenerateForm) {
-        regenerateModalConfirm.addEventListener('click', function () {
-            regenerateForm.submit();
-        });
-    }
-
-    function setCellLock(cell, locked) {
-        const checkbox = cell.querySelector('.lock-checkbox');
-        const badge = cell.querySelector('.lock-badge');
-        if (!checkbox || checkbox.checked === locked) {
-            return;
-        }
-        checkbox.checked = locked;
-        cell.classList.toggle('ring-2', locked);
-        cell.classList.toggle('ring-idiet', locked);
-        cell.classList.toggle('bg-idiet/10', locked);
-        if (badge) badge.classList.toggle('hidden', !locked);
-    }
-
-    function toggleCellLock(cell) {
-        const checkbox = cell.querySelector('.lock-checkbox');
-        if (!checkbox) {
-            return;
-        }
-        setCellLock(cell, !checkbox.checked);
-        updateLockCount();
-    }
-
-    function toggleRowLock(rowHeader) {
-        const row = rowHeader.closest('tr');
-        const cells = row ? Array.from(row.querySelectorAll('.lock-cell[data-edit-url]')) : [];
-        if (!cells.length) {
-            return;
-        }
-        const allLocked = cells.every(function (cell) {
-            const checkbox = cell.querySelector('.lock-checkbox');
-            return checkbox && checkbox.checked;
-        });
-        cells.forEach(function (cell) {
-            setCellLock(cell, !allLocked);
-        });
-        updateLockCount();
-    }
-
-    document.querySelectorAll('.row-lock-toggle').forEach(function (rowHeader) {
-        rowHeader.addEventListener('click', function () {
-            if (lockMode) {
-                toggleRowLock(rowHeader);
-            }
-        });
-    });
 
     function csrfToken() {
         const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
@@ -308,10 +184,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.querySelectorAll('[data-edit-url]').forEach(function (cell) {
         cell.addEventListener('click', function (evt) {
-            if (lockMode) {
-                toggleCellLock(cell);
-                return;
-            }
             if (pasteMode) {
                 evt.stopPropagation();
                 handleCellClickInPasteMode(cell);
