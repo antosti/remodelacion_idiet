@@ -7,7 +7,7 @@ from Menus.generator.pools import build_candidate_pools
 # vuelve a generar desde cero hasta este numero de intentos; si ninguno entra
 # en rango, se usa el de menor fitness de todos los intentos (ver
 # _generate_day_within_ranges).
-MAX_DAY_ATTEMPTS = 5
+MAX_DAY_ATTEMPTS = 10
 
 
 class GenerationError(Exception):

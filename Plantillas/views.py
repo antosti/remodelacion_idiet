@@ -4,7 +4,8 @@ from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Q, Sum
+from django.db.models import Case, DecimalField, F, Q, Sum, Value, When
+from django.db.models.functions import Coalesce
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods, require_POST
@@ -33,12 +34,19 @@ CANONICAL_ALIAS_ORDER = [
     'Recena', 'Otros',
 ]
 
+# Duracion fija de toda plantilla nueva: el usuario ya no elige los dias,
+# solo el nombre y las tomas. La columna Template.duration se sigue usando
+# tal cual (7 dias = 1 semana).
+TEMPLATE_DURATION_DAYS = 7
 
-def _parse_int(value):
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
+# Expresion reutilizada por list_templates/list_deactivated_templates para
+# anotar la media de kcal/dia a partir de las TemplateIntake asignadas
+# (Template.daily_kcal ya no se usa para esto, ver create_template).
+AVG_DAILY_KCAL_ANNOTATION = Case(
+    When(duration__gt=0, then=Coalesce(Sum('templateintake__kcal'), Value(0)) / F('duration')),
+    default=Value(0),
+    output_field=DecimalField(max_digits=10, decimal_places=2),
+)
 
 
 def _meal_slots_from_post(post, standalone, groups):
@@ -104,6 +112,7 @@ def _intake_nutrition(nutrition, quantity):
 @login_required
 def list_templates(request):
     templates = scoped_queryset(Template.objects.filter(active=True), request.user).order_by('name')
+    templates = templates.annotate(avg_daily_kcal=AVG_DAILY_KCAL_ANNOTATION)
     pagination = paginate_queryset(request, templates, per_page=10)
 
     return render(request, 'admin/list_templates.html', {
@@ -119,19 +128,10 @@ def create_template(request):
 
     if request.method == 'POST':
         name = (request.POST.get('name') or '').strip()
-        daily_kcal = _parse_int(request.POST.get('daily_kcal'))
-        duration = _parse_int(request.POST.get('duration'))
 
         error = None
         if not name:
             error = 'Indica un nombre para la plantilla.'
-        elif not daily_kcal or daily_kcal <= 0 or daily_kcal > 10000:
-            error = 'Indica unas kcal diarias válidas (entre 1 y 10000).'
-        # Tope de 90 dias (~un trimestre): una plantilla reutilizable no
-        # necesita cubrir mas rango que eso, y evita un bulk_create masivo
-        # de TemplateIntake (duration x tomas seleccionadas) en la BD compartida.
-        elif not duration or duration <= 0 or duration > 90:
-            error = 'Indica una duración en días válida (entre 1 y 90 días).'
 
         meal_slots = _meal_slots_from_post(request.POST, standalone, groups) if not error else []
         if not error and not meal_slots:
@@ -144,15 +144,19 @@ def create_template(request):
             })
 
         with transaction.atomic():
+            # daily_kcal es NOT NULL en BD pero ya no se rellena desde el
+            # formulario: el kcal/dia mostrado en la UI se calcula a partir
+            # de las TemplateIntake asignadas (ver AVG_DAILY_KCAL_ANNOTATION
+            # y template_detail).
             template = Template.objects.create(
                 user=request.user,
                 name=name,
-                daily_kcal=daily_kcal,
-                duration=duration,
+                daily_kcal=0,
+                duration=TEMPLATE_DURATION_DAYS,
             )
 
             rows = []
-            for day_index in range(duration):
+            for day_index in range(TEMPLATE_DURATION_DAYS):
                 for slot in meal_slots:
                     for role in slot.active_roles():
                         alias = slot.label if slot.kind == 'single' else f'{ROLE_LABELS[role]} - {slot.label}'
@@ -247,9 +251,13 @@ def template_detail(request, id):
 
         weeks.append({'days': days_info, 'rows': week_rows})
 
+    total_kcal = sum((totals['kcal'] for totals in day_totals.values()), Decimal('0'))
+    avg_daily_kcal = total_kcal / template.duration if template.duration else Decimal('0')
+
     return render(request, 'admin/template_detail.html', {
         'template': template,
         'weeks': weeks,
+        'avg_daily_kcal': avg_daily_kcal,
     })
 
 
@@ -427,6 +435,7 @@ def deactivate_templates_bulk(request):
 @login_required
 def list_deactivated_templates(request):
     templates = scoped_queryset(Template.objects.filter(active=False), request.user).order_by('name')
+    templates = templates.annotate(avg_daily_kcal=AVG_DAILY_KCAL_ANNOTATION)
     return render(
         request,
         'admin/list_deactivated_templates.html',

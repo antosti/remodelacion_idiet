@@ -85,7 +85,7 @@
                                 data-template-id="{{ template.id }}">
                         </td>
                         <td class="px-4 py-4 font-semibold text-gray-700 border-b border-gray-100">{{ template.name }}</td>
-                        <td class="px-4 py-4 text-gray-700 border-b border-gray-100">{{ template.daily_kcal }}</td>
+                        <td class="px-4 py-4 text-gray-700 border-b border-gray-100">{{ template.avg_daily_kcal|floatformat:0 }}</td>
                         <td class="px-4 py-4 text-gray-700 border-b border-gray-100">{{ template.duration }}</td>
                         <td class="px-4 py-4 border-b border-gray-100">
                             <div class="flex justify-center gap-2">
@@ -96,8 +96,7 @@
                                 <button type="button"
                                     class="edit-template-btn rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
                                     data-action="{% url 'edit_template' template.id %}"
-                                    data-name="{{ template.name }}"
-                                    data-daily-kcal="{{ template.daily_kcal }}">
+                                    data-name="{{ template.name }}">
                                     Editar
                                 </button>
                                 <form method="POST" action="{% url 'deactivate_template' template.id %}">
@@ -195,7 +194,7 @@
         <div class="mb-5 flex items-center justify-between">
             <div>
                 <h2 id="editTemplateModalTitle" class="text-xl font-bold text-gray-800">Editar plantilla</h2>
-                <p class="mt-1 text-sm text-gray-500">Modifica el nombre y las kcal diarias de la plantilla.</p>
+                <p class="mt-1 text-sm text-gray-500">Modifica el nombre de la plantilla.</p>
             </div>
             <button type="button" data-close-edit-modal
                 class="rounded-lg p-2 text-2xl leading-none text-gray-400 hover:bg-gray-100 hover:text-gray-700"
@@ -208,11 +207,6 @@
                 <div>
                     <label for="editTemplateName" class="mb-1.5 block text-sm font-semibold text-gray-700">Nombre</label>
                     <input id="editTemplateName" name="name" type="text" required
-                        class="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-700 outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30">
-                </div>
-                <div>
-                    <label for="editTemplateDailyKcal" class="mb-1.5 block text-sm font-semibold text-gray-700">Kcal diarias</label>
-                    <input id="editTemplateDailyKcal" name="daily_kcal" type="number" min="0" step="1" required
                         class="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-700 outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/30">
                 </div>
             </div>

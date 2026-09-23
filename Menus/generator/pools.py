@@ -6,7 +6,7 @@ from Dishes.models import Dish, DishCategorySize
 from Dishes.views import calculate_dish_nutrition
 from FoodGroup.models import FoodGroupExcluded
 from idiet.permissions import is_admin_user
-from Products.models import ProductExcluded, ProductMicronutrient
+from Products.models import Product, ProductExcluded, ProductMicronutrient
 from Menus.generator.domain import DishCandidate
 from Menus.generator.micronutrients import MICRO_IDS
 
@@ -17,13 +17,33 @@ ROLE_TO_DISH_TYPES = {
     'dessert': [Dish.DishType.DESSERT],
 }
 
+# Indicacion explicita de la nutricionista de excluir el huevo del calculo
+# de colesterol: el limite de Menus.generator.micronutrients no debe contar
+# el colesterol que aporta el huevo, ni como producto suelto (FoodGroup
+# "Huevos") ni como ingrediente de un plato/preparado que lo lleve (SuperGroup
+# "HUEVOS", que ademas cubre productos como mayonesa, quiche o tortilla de
+# patata cuyo colesterol viene del huevo aunque el producto ya no lo sea).
+EGG_FOOD_GROUP_ID = 44
+EGG_SUPER_GROUP_ID = 5
+COLESTEROL_MICRO_ID = MICRO_IDS['colesterol']
+
 
 def _product_micro_map(product_ids):
-    """dict[product_id][micronutrient_id] -> value (por 100g de producto)."""
+    """dict[product_id][micronutrient_id] -> value (por 100g de producto).
+    Descarta el colesterol de los productos con huevo (ver EGG_FOOD_GROUP_ID
+    / EGG_SUPER_GROUP_ID); el resto de sus micronutrientes se cuenta normal."""
+    egg_product_ids = set(
+        Product.objects.filter(id__in=product_ids)
+        .filter(Q(food_group_id=EGG_FOOD_GROUP_ID) | Q(super_groups__id=EGG_SUPER_GROUP_ID))
+        .distinct()
+        .values_list('id', flat=True)
+    )
     product_micro_map = defaultdict(dict)
     for pm in ProductMicronutrient.objects.filter(
         product_id__in=product_ids, micronutrient_id__in=MICRO_IDS.values()
     ):
+        if pm.micronutrient_id == COLESTEROL_MICRO_ID and pm.product_id in egg_product_ids:
+            continue
         product_micro_map[pm.product_id][pm.micronutrient_id] = pm.value
     return product_micro_map
 

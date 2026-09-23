@@ -93,7 +93,10 @@ def ranges_for_client(client):
     elif age >= 14:
         r[MICRO_IDS['vit_e']] = (15, 380)
 
-    r[MICRO_IDS['vit_d']] = (200, 200)
+    # vit_d: sin rango. La ingesta adecuada real (~200 UI) es un valor puntual,
+    # no un intervalo, y con datos de alimentos reales practicamente nunca cae
+    # justo en ese punto -> dejaba el dia "fuera de rango" siempre, sin que
+    # eso reflejase un problema real del menu generado.
     r[MICRO_IDS['cromo']] = (30, 200)
     r[MICRO_IDS['colesterol']] = (None, 100)  # asume cholesterol=0 (sin patologia)
     r[MICRO_IDS['sodio']] = (None, 1000)      # asume hypertension=0 (sin patologia)

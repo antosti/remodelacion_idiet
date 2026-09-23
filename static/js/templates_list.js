@@ -69,7 +69,6 @@ document.addEventListener('DOMContentLoaded', () => {
     button.addEventListener('click', () => {
       editForm.action = button.dataset.action;
       document.getElementById('editTemplateName').value = button.dataset.name;
-      document.getElementById('editTemplateDailyKcal').value = button.dataset.dailyKcal;
       editModal.classList.remove('hidden');
       setBodyScroll();
     });

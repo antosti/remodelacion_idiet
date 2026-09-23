@@ -42,8 +42,6 @@ class CreateTemplateViewTests(TestCase):
     def _valid_payload(self, **overrides):
         payload = {
             'name': 'Plantilla semanal',
-            'daily_kcal': '2000',
-            'duration': '3',
             'include_comida': 'on',
             'platos_comida': '1',
         }
@@ -57,13 +55,14 @@ class CreateTemplateViewTests(TestCase):
         template = Template.objects.get(user=self.nutri)
         self.assertRedirects(response, reverse('template_detail', args=[template.id]))
         self.assertEqual(template.name, 'Plantilla semanal')
-        self.assertEqual(template.daily_kcal, 2000)
-        self.assertEqual(template.duration, 3)
+        self.assertEqual(template.daily_kcal, 0)
+        self.assertEqual(template.duration, 7)
         self.assertTrue(template.active)
 
         items = list(TemplateIntake.objects.filter(template=template))
-        # 3 dias x 1 toma (solo 'main' de comida: sin entrante ni postre en el payload)
-        self.assertEqual(len(items), 3)
+        # 7 dias (duracion fija) x 1 toma (solo 'main' de comida: sin
+        # entrante ni postre en el payload)
+        self.assertEqual(len(items), 7)
         for item in items:
             self.assertIsNone(item.dish_id)
             self.assertFalse(item.is_free_meal)
@@ -82,59 +81,19 @@ class CreateTemplateViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Template.objects.exists())
 
-    def test_post_with_zero_duration_creates_nothing(self):
-        self.client.force_login(self.nutri)
-        response = self.client.post(reverse('create_template'), self._valid_payload(duration='0'))
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(Template.objects.exists())
-
-    def test_post_with_negative_daily_kcal_creates_nothing(self):
-        self.client.force_login(self.nutri)
-        response = self.client.post(reverse('create_template'), self._valid_payload(daily_kcal='-100'))
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(Template.objects.exists())
-
-    def test_post_with_non_numeric_duration_creates_nothing(self):
-        self.client.force_login(self.nutri)
-        response = self.client.post(reverse('create_template'), self._valid_payload(duration='abc'))
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(Template.objects.exists())
-
-    def test_duration_and_daily_kcal_above_upper_bound_are_rejected(self):
-        # Hallazgo [Low] corregido: create_template ahora rechaza
-        # daily_kcal > 10000 y duration > 90 en vez de aceptar cualquier
-        # valor positivo.
+    def test_posted_duration_and_daily_kcal_are_ignored(self):
+        # El formulario ya no pide duracion ni kcal diarias: si se postean
+        # de todos modos (p.ej. peticion manual), se ignoran por completo y
+        # la plantilla se crea con la duracion fija de 7 dias.
         self.client.force_login(self.nutri)
         response = self.client.post(reverse('create_template'), self._valid_payload(
-            duration='400', daily_kcal='999999999',
-        ))
-        self.assertEqual(response.status_code, 200)
-        # daily_kcal se valida antes que duration (elif), asi que con ambos
-        # valores fuera de rango el mensaje mostrado es el de kcal.
-        self.assertContains(response, 'Indica unas kcal diarias válidas (entre 1 y 10000).')
-        self.assertFalse(Template.objects.exists())
-        self.assertFalse(TemplateIntake.objects.exists())
-
-    def test_duration_above_upper_bound_alone_is_rejected(self):
-        self.client.force_login(self.nutri)
-        response = self.client.post(reverse('create_template'), self._valid_payload(duration='91'))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Indica una duración en días válida (entre 1 y 90 días).')
-        self.assertFalse(Template.objects.exists())
-        self.assertFalse(TemplateIntake.objects.exists())
-
-    def test_duration_and_daily_kcal_at_upper_bound_are_accepted(self):
-        # Los limites son inclusive (> 10000 / > 90 rechazan, no >=), asi que
-        # los valores frontera deben aceptarse.
-        self.client.force_login(self.nutri)
-        response = self.client.post(reverse('create_template'), self._valid_payload(
-            duration='90', daily_kcal='10000',
+            duration='3', daily_kcal='999999999',
         ))
         self.assertEqual(response.status_code, 302)
         template = Template.objects.get(user=self.nutri)
-        self.assertEqual(template.duration, 90)
-        self.assertEqual(template.daily_kcal, 10000)
-        self.assertEqual(TemplateIntake.objects.filter(template=template).count(), 90)
+        self.assertEqual(template.duration, 7)
+        self.assertEqual(template.daily_kcal, 0)
+        self.assertEqual(TemplateIntake.objects.filter(template=template).count(), 7)
 
 
 class TemplateDetailViewTests(TestCase):
@@ -164,6 +123,63 @@ class TemplateDetailViewTests(TestCase):
         self.client.force_login(self.nutri)
         response = self.client.get(reverse('template_detail', args=[999999]))
         self.assertEqual(response.status_code, 404)
+
+    def test_avg_daily_kcal_in_context_is_mean_of_day_totals(self):
+        # template.daily_kcal ya no se usa: el kcal/dia mostrado se calcula
+        # a partir de las TemplateIntake asignadas (500 dia 0, 300 dia 1 ->
+        # media 400 con duration=2).
+        template = make_template(self.nutri, name='Con kcal', duration=2)
+        TemplateIntake.objects.create(
+            template=template, dish=None, intake=self.main_intake,
+            quantity=0, kcal=Decimal('500'), menu_day=0, intake_alias='Plato principal - Comida',
+        )
+        TemplateIntake.objects.create(
+            template=template, dish=None, intake=self.main_intake,
+            quantity=0, kcal=Decimal('300'), menu_day=1, intake_alias='Plato principal - Comida',
+        )
+
+        self.client.force_login(self.nutri)
+        response = self.client.get(reverse('template_detail', args=[template.id]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['avg_daily_kcal'], Decimal('400'))
+
+
+class ListTemplatesViewTests(TestCase):
+
+    def setUp(self):
+        self.nutri = make_nutri('tpl_list1@example.com')
+        _, groups = get_meal_structure()
+        self.main_intake = groups['comida']['main']
+
+    def test_avg_daily_kcal_is_computed_from_template_intakes(self):
+        # Igual que TemplateDetailViewTests.test_avg_daily_kcal..., pero via
+        # la anotacion de list_templates (AVG_DAILY_KCAL_ANNOTATION).
+        template = make_template(self.nutri, name='Con kcal', duration=2)
+        TemplateIntake.objects.create(
+            template=template, dish=None, intake=self.main_intake,
+            quantity=0, kcal=Decimal('500'), menu_day=0, intake_alias='Plato principal - Comida',
+        )
+        TemplateIntake.objects.create(
+            template=template, dish=None, intake=self.main_intake,
+            quantity=0, kcal=Decimal('300'), menu_day=1, intake_alias='Plato principal - Comida',
+        )
+
+        self.client.force_login(self.nutri)
+        response = self.client.get(reverse('list_templates'))
+        self.assertEqual(response.status_code, 200)
+
+        listed = {t.id: t for t in response.context['templates']}
+        self.assertEqual(listed[template.id].avg_daily_kcal, Decimal('400'))
+
+    def test_avg_daily_kcal_is_zero_without_template_intakes(self):
+        template = make_template(self.nutri, name='Vacía', duration=2)
+
+        self.client.force_login(self.nutri)
+        response = self.client.get(reverse('list_templates'))
+        self.assertEqual(response.status_code, 200)
+
+        listed = {t.id: t for t in response.context['templates']}
+        self.assertEqual(listed[template.id].avg_daily_kcal, Decimal('0'))
 
 
 class DeactivatedTemplateAccessTests(TestCase):
@@ -241,20 +257,19 @@ class EditTemplateViewTests(TestCase):
         self.other_nutri = make_nutri('tpl_edit2@example.com')
         self.template = make_template(self.nutri, name='Original', daily_kcal=1800)
 
-    def test_owner_can_edit_name_and_kcal(self):
+    def test_owner_can_edit_name(self):
         self.client.force_login(self.nutri)
         response = self.client.post(reverse('edit_template', args=[self.template.id]), {
-            'name': 'Nuevo nombre', 'daily_kcal': '2200',
+            'name': 'Nuevo nombre',
         })
         self.assertRedirects(response, reverse('list_templates'))
         self.template.refresh_from_db()
         self.assertEqual(self.template.name, 'Nuevo nombre')
-        self.assertEqual(self.template.daily_kcal, 2200)
 
     def test_other_nutri_cannot_edit(self):
         self.client.force_login(self.other_nutri)
         response = self.client.post(reverse('edit_template', args=[self.template.id]), {
-            'name': 'Hackeado', 'daily_kcal': '1',
+            'name': 'Hackeado',
         })
         self.assertEqual(response.status_code, 404)
         self.template.refresh_from_db()
@@ -265,7 +280,7 @@ class EditTemplateViewTests(TestCase):
         self.template.save(update_fields=['active'])
         self.client.force_login(self.nutri)
         response = self.client.post(reverse('edit_template', args=[self.template.id]), {
-            'name': 'X', 'daily_kcal': '2000',
+            'name': 'X',
         })
         self.assertEqual(response.status_code, 404)
 
@@ -274,7 +289,9 @@ class EditTemplateViewTests(TestCase):
         response = self.client.get(reverse('edit_template', args=[self.template.id]))
         self.assertEqual(response.status_code, 405)
 
-    def test_daily_kcal_above_upper_bound_is_rejected(self):
+    def test_posted_daily_kcal_is_ignored(self):
+        # TemplateForm ya no expone daily_kcal: postearlo no debe cambiar el
+        # valor guardado.
         self.client.force_login(self.nutri)
         response = self.client.post(reverse('edit_template', args=[self.template.id]), {
             'name': 'Original', 'daily_kcal': '10001',
@@ -282,24 +299,6 @@ class EditTemplateViewTests(TestCase):
         self.assertRedirects(response, reverse('list_templates'))
         self.template.refresh_from_db()
         self.assertEqual(self.template.daily_kcal, 1800)
-
-    def test_daily_kcal_zero_or_negative_is_rejected(self):
-        self.client.force_login(self.nutri)
-        response = self.client.post(reverse('edit_template', args=[self.template.id]), {
-            'name': 'Original', 'daily_kcal': '0',
-        })
-        self.assertRedirects(response, reverse('list_templates'))
-        self.template.refresh_from_db()
-        self.assertEqual(self.template.daily_kcal, 1800)
-
-    def test_daily_kcal_at_upper_bound_is_accepted(self):
-        self.client.force_login(self.nutri)
-        response = self.client.post(reverse('edit_template', args=[self.template.id]), {
-            'name': 'Original', 'daily_kcal': '10000',
-        })
-        self.assertRedirects(response, reverse('list_templates'))
-        self.template.refresh_from_db()
-        self.assertEqual(self.template.daily_kcal, 10000)
 
 
 class EditTemplateIntakeViewTests(TestCase):

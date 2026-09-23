@@ -3,9 +3,9 @@ import random
 
 from Menus.generator.fitness import fitness
 
-DEFAULT_POP_SIZE = 24
-DEFAULT_N_GENERATIONS = 60
-DEFAULT_THRESHOLD = 30.0
+DEFAULT_POP_SIZE = 40
+DEFAULT_N_GENERATIONS = 150
+DEFAULT_THRESHOLD = 15.0
 DEFAULT_MUTATION_RATE = 0.3
 
 # Peso relativo de cada toma "suelta" en el reparto de kcal del dia (por

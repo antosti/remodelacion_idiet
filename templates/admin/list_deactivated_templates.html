@@ -79,7 +79,7 @@
                                 data-template-id="{{ template.id }}">
                         </td>
                         <td class="px-4 py-4 font-semibold text-gray-700 border-b border-gray-100">{{ template.name }}</td>
-                        <td class="px-4 py-4 text-gray-700 border-b border-gray-100">{{ template.daily_kcal }}</td>
+                        <td class="px-4 py-4 text-gray-700 border-b border-gray-100">{{ template.avg_daily_kcal|floatformat:0 }}</td>
                         <td class="px-4 py-4 text-gray-700 border-b border-gray-100">{{ template.duration }}</td>
                         <td class="px-4 py-4 border-b border-gray-100">
                             <div class="flex justify-center gap-2">

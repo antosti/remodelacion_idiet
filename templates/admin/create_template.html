@@ -20,23 +20,16 @@
 
         <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm space-y-4">
             <h2 class="text-lg font-semibold text-gray-700">Datos generales</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
                     <input type="text" name="name" required
                         class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
                 </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Kcal / día</label>
-                    <input type="number" name="daily_kcal" min="1" max="10000" required
-                        class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Duración (días)</label>
-                    <input type="number" name="duration" min="1" max="90" required
-                        class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
-                </div>
             </div>
+            <p class="text-sm text-gray-500">
+                La plantilla tendrá 7 días. Las kcal por día se calcularán a partir de los platos que asignes.
+            </p>
         </div>
 
         <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm space-y-5">

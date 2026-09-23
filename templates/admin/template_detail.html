@@ -14,10 +14,10 @@
         </h1>
         <div class="flex items-center gap-4">
             <p class="text-sm text-gray-500">
-                {{ template.daily_kcal }} kcal/día · {{ template.duration }} día(s)
+                ≈ {{ avg_daily_kcal|floatformat:0 }} kcal/día (media) · {{ template.duration }} día(s)
             </p>
             <a href="{% url 'list_templates' %}" class="text-sm font-semibold text-idiet hover:text-idiet/80">
-                Editar nombre / kcal desde el listado
+                Editar nombre desde el listado
             </a>
         </div>
     </div>
