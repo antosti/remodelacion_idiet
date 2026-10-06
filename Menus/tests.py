@@ -236,6 +236,24 @@ class MicroFitnessPenaltyTests(TestCase):
             score, MICRO_PENALTY_WEIGHT * (expected_calcium_penalty + expected_vit_c_penalty)
         )
 
+    def test_potassium_guides_fitness_but_is_not_required_to_accept_day(self):
+        from Menus.generator.fitness import within_micro_ranges
+        target = NutritionTarget(
+            kcal=200, prot_g=20, fat_g=5, carb_g=10,
+            micro_ranges={
+                MICRO_IDS['vit_c']: (60, 1800),       # 100 -> dentro
+                MICRO_IDS['potasio']: (3500, 3500),   # 0 -> fuera
+            },
+        )
+
+        self.assertGreater(fitness(self.day_menu, target), fitness(self.day_menu, NutritionTarget(
+            kcal=200, prot_g=20, fat_g=5, carb_g=10, micro_ranges={MICRO_IDS['vit_c']: (60, 1800)},
+        )))
+        self.assertTrue(within_micro_ranges(self.day_menu, target.micro_ranges))
+
+        target.micro_ranges[MICRO_IDS['vit_c']] = (500, 1800)  # 100 -> fuera
+        self.assertFalse(within_micro_ranges(self.day_menu, target.micro_ranges))
+
 
 class MicronutrientGuidedGATests(TestCase):
     """El GA debe preferir, a igualdad de macros, el plato que ayuda a cubrir
@@ -343,6 +361,16 @@ class CreateDietViewTests(TestCase):
         response = self.client.get(reverse('create_diet', args=[self.client1.id]))
         self.assertEqual(response.status_code, 404)
 
+    def test_portion_size_selector_is_in_step_2(self):
+        self.client.force_login(self.nutri1)
+        html = self.client.get(reverse('create_diet', args=[self.client1.id])).content.decode()
+
+        step2 = html.index('data-step="2"')
+        step3 = html.index('data-step="3"')
+        portion = html.index('name="portion_size"')
+        self.assertTrue(step2 < html.index('name="limit_portion"') < step3)
+        self.assertTrue(step2 < portion < step3)
+
     def test_invalid_days_shows_error_without_creating_menu(self):
         self.client.force_login(self.nutri1)
         response = self.client.post(reverse('create_diet', args=[self.client1.id]), {
@@ -397,6 +425,16 @@ class EditMenuIntakeViewTests(TestCase):
     def _url(self, item=None):
         item = item or self.item
         return reverse('edit_menu_intake', args=[self.client_obj.id, self.menu.id, item.id])
+
+    def test_get_options_flag_active_and_prepend_deactivated_current_dish(self):
+        self.dish_main.active = False
+        self.dish_main.save(update_fields=['active'])
+        self.client.force_login(self.nutri)
+        options = self.client.get(self._url()).json()['options']
+        by_id = {opt['id']: opt for opt in options}
+        self.assertIs(by_id[self.dish_main.id]['active'], False)
+        self.assertIs(by_id[self.dish_main_alt.id]['active'], True)
+        self.assertEqual(options[0]['id'], self.dish_main.id)
 
     def test_get_returns_current_state_and_options(self):
         self.client.force_login(self.nutri)
@@ -742,6 +780,60 @@ class DietDetailViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Comida libre')
 
+    def test_edit_modal_has_recipe_link(self):
+        self.client.force_login(self.nutri)
+        response = self.client.get(reverse('diet_detail', args=[self.client_obj.id, self.menu.id]))
+
+        self.assertContains(response, 'id="edit-intake-recipe-link"')
+        self.assertContains(response, 'target="_blank"')
+        self.assertContains(response, 'data-url-template="%s"' % reverse('edit_dish', args=[0]))
+
+
+class ClientDietsViewTests(TestCase):
+
+    def setUp(self):
+        self.nutri = make_nutri('nutri_list@example.com')
+        self.client_obj = make_client(self.nutri)
+
+        standalone, groups = get_meal_structure()
+        intakes = [standalone[0], groups['comida']['starter'], groups['comida']['main'], groups['cena']['main']]
+
+        self.menu = Menu.objects.create(
+            user=self.nutri, client=self.client_obj,
+            date_ini=date(2026, 9, 1), date_fin=date(2026, 9, 2),
+        )
+        for day in range(2):
+            for intake in intakes:
+                MenuIntake.objects.create(
+                    menu=self.menu, dish=None, intake=intake,
+                    quantity=0, kcal=Decimal('0.00'), menu_day=day,
+                    intake_alias=intake.name, is_free_meal=True,
+                )
+
+    def test_shows_meals_per_day_grouping_courses(self):
+        self.client.force_login(self.nutri)
+        response = self.client.get(reverse('client_diets', args=[self.client_obj.id]))
+
+        self.assertEqual(response.status_code, 200)
+        menu = response.context['menus'][0]
+        # Desayuno + Comida (entrante y principal) + Cena = 3, no 8 tomas.
+        self.assertEqual(menu.meals_per_day, 3)
+        self.assertContains(response, 'Ingestas/día')
+
+    def test_menu_without_intakes_shows_zero(self):
+        self.menu.menuintake_set.all().delete()
+        self.client.force_login(self.nutri)
+        response = self.client.get(reverse('client_diets', args=[self.client_obj.id]))
+
+        self.assertEqual(response.context['menus'][0].meals_per_day, 0)
+
+    def test_other_nutri_gets_404(self):
+        other = make_nutri('other_list@example.com')
+        self.client.force_login(other)
+        response = self.client.get(reverse('client_diets', args=[self.client_obj.id]))
+
+        self.assertEqual(response.status_code, 404)
+
 
 class DeleteMenuViewTests(TestCase):
 
@@ -1006,3 +1098,180 @@ class CreateDietFromTemplateTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Menu.objects.filter(client=self.client1).exists())
+
+
+class TemplateKcalScalingTests(TestCase):
+    """create_diet + use_template + target_kcal: cada dia de la plantilla se
+    escala con un mismo factor para todos sus platos; en dias con comida libre
+    la parte de esa toma no se compensa con el resto de platos."""
+
+    def setUp(self):
+        self.nutri = make_nutri('tpl_scale_nutri@example.com')
+        self.client_obj = make_client(self.nutri)
+
+        product = make_product('Pollo', kcal=200, prot=30, fat=5, carb=0)
+        self.dish = make_dish('Pollo asado', Dish.DishType.MAIN, product)
+
+        _, groups = get_meal_structure()
+        comida, cena = groups['comida']['main'], groups['cena']['main']
+
+        self.template = Template.objects.create(user=self.nutri, name='Plantilla', daily_kcal=500, duration=2)
+        # Dia 0: 300 + 200 = 500 kcal.
+        self._item(comida, 'Plato principal - Comida', 0, 150, '300.00')
+        self._item(cena, 'Plato principal - Cena', 0, 100, '200.00')
+        # Dia 1: comida libre + 200 kcal.
+        TemplateIntake.objects.create(
+            template=self.template, dish=None, intake=comida, quantity=0, kcal=Decimal('0.00'),
+            menu_day=1, intake_alias='Plato principal - Comida', is_free_meal=True,
+        )
+        self._item(cena, 'Plato principal - Cena', 1, 100, '200.00')
+
+    def _item(self, intake, alias, day, quantity, kcal):
+        TemplateIntake.objects.create(
+            template=self.template, dish=self.dish, intake=intake, quantity=quantity,
+            kcal=Decimal(kcal), menu_day=day, intake_alias=alias,
+        )
+
+    def _post(self, **extra):
+        self.client.force_login(self.nutri)
+        payload = {'use_template': 'on', 'template_id': str(self.template.id), 'start_date': '2026-09-01'}
+        payload.update(extra)
+        return self.client.post(reverse('create_diet', args=[self.client_obj.id]), payload)
+
+    def _rows(self):
+        menu = Menu.objects.get(client=self.client_obj)
+        return {(row.menu_day, row.intake_alias): row for row in MenuIntake.objects.filter(menu=menu)}
+
+    def test_scales_all_dishes_of_day_proportionally(self):
+        self._post(target_kcal='1000')
+        rows = self._rows()
+
+        self.assertEqual(rows[(0, 'Plato principal - Comida')].quantity, 300)
+        self.assertEqual(rows[(0, 'Plato principal - Comida')].kcal, Decimal('600.00'))
+        self.assertEqual(rows[(0, 'Plato principal - Cena')].quantity, 200)
+        self.assertEqual(rows[(0, 'Plato principal - Cena')].kcal, Decimal('400.00'))
+
+    def test_free_meal_share_is_not_compensated(self):
+        self._post(target_kcal='1000')
+        rows = self._rows()
+
+        # La comida libre ocupa ~300 kcal (media de esa toma): factor 1000/500 = 2,
+        # no 1000/200 = 5.
+        free = rows[(1, 'Plato principal - Comida')]
+        self.assertTrue(free.is_free_meal)
+        self.assertEqual(free.quantity, 0)
+        self.assertEqual(free.kcal, Decimal('0.00'))
+        self.assertEqual(rows[(1, 'Plato principal - Cena')].quantity, 200)
+        self.assertEqual(rows[(1, 'Plato principal - Cena')].kcal, Decimal('400.00'))
+
+    def test_without_target_copies_template_unchanged(self):
+        self._post()
+        rows = self._rows()
+
+        self.assertEqual(rows[(0, 'Plato principal - Comida')].quantity, 150)
+        self.assertEqual(rows[(0, 'Plato principal - Comida')].kcal, Decimal('300.00'))
+        self.assertEqual(rows[(1, 'Plato principal - Cena')].quantity, 100)
+
+    def test_invalid_target_shows_error_without_creating_menu(self):
+        response = self._post(target_kcal='0')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(Menu.objects.filter(client=self.client_obj).exists())
+
+    def test_template_itself_is_not_modified(self):
+        self._post(target_kcal='1000')
+
+        self.assertEqual(
+            sorted(TemplateIntake.objects.filter(template=self.template).values_list('quantity', flat=True)),
+            [0, 100, 100, 150],
+        )
+
+    def test_unestimable_free_meal_uses_full_day_factor(self):
+        from types import SimpleNamespace
+        from Menus.generator.persistence import _template_day_factors
+
+        items = [
+            SimpleNamespace(menu_day=0, intake_alias='A', kcal=Decimal('500'), is_free_meal=False, dish_id=1),
+            SimpleNamespace(menu_day=1, intake_alias='A', kcal=Decimal('400'), is_free_meal=False, dish_id=1),
+            SimpleNamespace(menu_day=1, intake_alias='B', kcal=Decimal('0'), is_free_meal=True, dish_id=None),
+        ]
+        factors = _template_day_factors(items, 1000)
+
+        self.assertEqual(factors[0], Decimal('2'))
+        # 'B' nunca tiene plato: se usa el factor de los dias completos (2), no 1000/400.
+        self.assertEqual(factors[1], Decimal('2'))
+
+
+class SaveMenuAsTemplateViewTests(TestCase):
+
+    def setUp(self):
+        self.nutri = make_nutri('save_tpl_nutri@example.com')
+        self.client_obj = make_client(self.nutri)
+
+        product = make_product('Pollo', kcal=200, prot=30, fat=5, carb=0)
+        self.dish = make_dish('Pollo asado', Dish.DishType.MAIN, product)
+
+        _, groups = get_meal_structure()
+        self.comida, self.cena = groups['comida']['main'], groups['cena']['main']
+
+        self.menu = Menu.objects.create(
+            user=self.nutri, client=self.client_obj,
+            date_ini=date(2026, 9, 1), date_fin=date(2026, 9, 10),
+        )
+        MenuIntake.objects.create(
+            menu=self.menu, dish=self.dish, intake=self.comida, quantity=173,
+            kcal=Decimal('346.00'), menu_day=0, intake_alias='Plato principal - Comida',
+        )
+        MenuIntake.objects.create(
+            menu=self.menu, dish=None, intake=self.cena, quantity=0,
+            kcal=Decimal('0.00'), menu_day=9, intake_alias='Plato principal - Cena', is_free_meal=True,
+        )
+
+    def _url(self):
+        return reverse('save_menu_as_template', args=[self.client_obj.id, self.menu.id])
+
+    def _snapshot(self, qs):
+        return list(qs.order_by('menu_day', 'intake_alias').values_list(
+            'dish_id', 'intake_id', 'quantity', 'kcal', 'menu_day', 'intake_alias', 'is_free_meal',
+        ))
+
+    def test_copies_menu_as_is_into_new_template(self):
+        menu_before = self._snapshot(MenuIntake.objects.filter(menu=self.menu))
+        self.client.force_login(self.nutri)
+        response = self.client.post(self._url(), {'name': 'Mi plantilla'})
+
+        template = Template.objects.get(name='Mi plantilla')
+        self.assertRedirects(response, reverse('template_detail', args=[template.id]))
+        self.assertEqual(template.user_id, self.nutri.id)
+        self.assertEqual(template.duration, 10)
+        self.assertTrue(template.active)
+        self.assertEqual(self._snapshot(TemplateIntake.objects.filter(template=template)), menu_before)
+        # La dieta original no cambia.
+        self.assertEqual(self._snapshot(MenuIntake.objects.filter(menu=self.menu)), menu_before)
+
+    def test_empty_name_shows_error_without_creating_template(self):
+        self.client.force_login(self.nutri)
+        response = self.client.post(self._url(), {'name': '   '})
+
+        self.assertRedirects(response, reverse('diet_detail', args=[self.client_obj.id, self.menu.id]))
+        self.assertFalse(Template.objects.exists())
+
+    def test_other_nutri_gets_404(self):
+        self.client.force_login(make_nutri('save_tpl_other@example.com'))
+        response = self.client.post(self._url(), {'name': 'Robada'})
+
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(Template.objects.exists())
+
+    def test_get_not_allowed(self):
+        self.client.force_login(self.nutri)
+        response = self.client.get(self._url())
+
+        self.assertEqual(response.status_code, 405)
+
+    def test_diet_detail_shows_save_as_template_button(self):
+        self.client.force_login(self.nutri)
+        response = self.client.get(reverse('diet_detail', args=[self.client_obj.id, self.menu.id]))
+
+        self.assertContains(response, 'id="save-template-btn"')
+        self.assertContains(response, 'action="%s"' % self._url())

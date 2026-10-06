@@ -1,4 +1,5 @@
 from Menus.generator.domain import day_micro_totals, day_totals
+from Menus.generator.micronutrients import GUIDE_ONLY_MICRO_IDS
 
 # Peso del termino de micronutrientes en el fitness, mismo orden que el peso
 # 15 ya usado para proteina (ver total_f_fitness_micros en
@@ -70,10 +71,16 @@ def _micro_boundary_penalty(day_menu, micro_ranges):
 def within_micro_ranges(day_menu, micro_ranges):
     """True si day_menu no se sale de ningun rango de micro_ranges (o si
     micro_ranges esta vacio, en cuyo caso no hay nada que comprobar). Usado
-    por Menus.generator.service para decidir si hace falta regenerar el dia."""
-    if not micro_ranges:
+    por Menus.generator.service para decidir si hace falta regenerar el dia.
+    Ignora los micros de GUIDE_ONLY_MICRO_IDS (solo guian al GA)."""
+    required = {
+        micro_id: bounds
+        for micro_id, bounds in micro_ranges.items()
+        if micro_id not in GUIDE_ONLY_MICRO_IDS
+    }
+    if not required:
         return True
-    return _micro_boundary_penalty(day_menu, micro_ranges) == 0.0
+    return _micro_boundary_penalty(day_menu, required) == 0.0
 
 
 def fitness(day_menu, target):

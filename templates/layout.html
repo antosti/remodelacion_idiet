@@ -5,14 +5,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="{% static 'dist/style.css' %}" />
-    <title>{% block title %} I-diet {% endblock %}</title>
+    <title>{% block title %} i-diet {% endblock %}</title>
   </head>
   <body>
     <header class="bg-white">
       <nav aria-label="Global" class="mx-auto flex items-center justify-between p-6 lg:px-8 bg-idiet">
         <div class="flex lg:flex-1">
       <a href="{% url 'home' %}" class="-m-1.5 p-1.5">
-        <span class="sr-only">I-diet</span>
+        <span class="sr-only">i-diet</span>
         <img src="https://www.i-diet.es/www/app_dev/img/logo-idiet-login.png" alt="" class="h-8 w-auto" />
       </a>
     </div>
@@ -126,7 +126,7 @@
     <div class="mt-16 flex justify-center gap-x-10">
       <div><a href="https://www.portalesmedicos.com/web_interes_sanitario/160079.htm" target="_blank"><img src="https://www.portalesmedicos.com/web_interes_sanitario/logo_wis_130x50.jpg" style="border-width: 0px" /></a></div>
     </div>
-    <p class="mt-10 text-center text-sm/6 text-white">&copy; {% now "Y" %} I-Diet, All rights reserved.</p>
+    <p class="mt-10 text-center text-sm/6 text-white">&copy; {% now "Y" %} i-Diet, All rights reserved.</p>
   </div>
 </footer>
 <script src="{% static 'js/main.js' %}"></script>

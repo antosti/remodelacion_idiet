@@ -15,6 +15,13 @@ MICRO_IDS = {
     'yodo': 37,
 }
 
+# Micros que guian al GA (entran en el fitness) pero que within_micro_ranges
+# no exige para dar el dia por bueno. Potasio: casi todos sus tramos de edad
+# son un valor puntual (min == max, p.ej. 3500-3500 en adultos), asi que
+# ningun dia lo cumplia y Menus.generator.service agotaba siempre
+# MAX_DAY_ATTEMPTS. Para volver a exigirlo, quitarlo de este conjunto.
+GUIDE_ONLY_MICRO_IDS = frozenset({MICRO_IDS['potasio']})
+
 
 def ranges_for_client(client):
     """dict[micronutrient_id] -> (minimo, maximo), alguno de los dos puede ser
@@ -57,6 +64,8 @@ def ranges_for_client(client):
     elif age >= 50:
         r[MICRO_IDS['hierro']] = (10, 30)
 
+    # potasio: el GA lo acerca a este valor, pero no se exige para dar el dia
+    # por bueno (ver GUIDE_ONLY_MICRO_IDS).
     if 4 <= age <= 5:
         r[MICRO_IDS['potasio']] = (1100, 1100)
     elif 6 <= age <= 9:

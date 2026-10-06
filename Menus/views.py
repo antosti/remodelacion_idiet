@@ -23,7 +23,7 @@ from Menus.generator.pools import ROLE_TO_DISH_TYPES, _to_candidate
 from Menus.generator.service import GenerationError, generate_diet
 from Menus.generator.targets import attach_micro_ranges, default_target_for_client, macro_split_for_kcal
 from Menus.models import Menu, MenuIntake
-from Plantillas.models import Template
+from Plantillas.models import Template, TemplateIntake
 from Products.models import ProductExcluded
 
 logger = logging.getLogger('idiet.menus')
@@ -135,12 +135,23 @@ def create_diet(request, id):
                     'client': client, 'standalone': standalone, 'groups': groups, 'templates': templates,
                 })
 
+            # Kcal/dia opcional: si se indica, las cantidades de la plantilla
+            # se escalan proporcionalmente para ajustarse a ese objetivo.
+            target_kcal = None
+            if (request.POST.get('target_kcal') or '').strip():
+                target_kcal = _parse_float(request.POST.get('target_kcal'))
+                if target_kcal is None or target_kcal <= 0:
+                    messages.error(request, 'Indica unas kcal/día válidas (mayores que 0).')
+                    return render(request, 'admin/create_diet_wizard.html', {
+                        'client': client, 'standalone': standalone, 'groups': groups, 'templates': templates,
+                    })
+
             template = get_object_or_404(
                 scoped_queryset(Template.objects.filter(active=True), request.user), id=template_id,
             )
 
             try:
-                persist_menu_from_template(request.user, client, template, start_date)
+                persist_menu_from_template(request.user, client, template, start_date, target_kcal=target_kcal)
             except GenerationError as exc:
                 messages.error(request, str(exc))
                 return render(request, 'admin/create_diet_wizard.html', {
@@ -201,9 +212,57 @@ def delete_menu(request, client_id, menu_id):
 
 
 @login_required
+@require_http_methods(['POST'])
+def save_menu_as_template(request, client_id, menu_id):
+    """Guarda la dieta tal y como esta (platos, cantidades, kcal, comidas
+    libres) como una plantilla nueva del nutricionista, con la misma
+    duracion que la dieta. La dieta original no se modifica."""
+    client = get_visible_client_or_404(request.user, id=client_id)
+    menu = get_object_or_404(Menu, id=menu_id, client=client)
+
+    name = (request.POST.get('name') or '').strip()
+    if not name:
+        messages.error(request, 'Indica un nombre para la plantilla.')
+        return redirect('diet_detail', client_id=client.id, menu_id=menu.id)
+
+    with transaction.atomic():
+        # daily_kcal es NOT NULL pero ya no se usa (ver Plantillas.views.create_template).
+        template = Template.objects.create(
+            user=request.user,
+            name=name,
+            daily_kcal=0,
+            duration=(menu.date_fin - menu.date_ini).days + 1,
+        )
+        TemplateIntake.objects.bulk_create([
+            TemplateIntake(
+                template=template,
+                dish_id=item.dish_id,
+                intake_id=item.intake_id,
+                quantity=item.quantity,
+                kcal=item.kcal,
+                menu_day=item.menu_day,
+                intake_alias=item.intake_alias,
+                is_free_meal=item.is_free_meal,
+            )
+            for item in MenuIntake.objects.filter(menu=menu)
+        ])
+
+    messages.success(request, 'La dieta se ha guardado como plantilla correctamente.')
+    return redirect('template_detail', id=template.id)
+
+
+@login_required
 def client_diets(request, id):
     client = get_visible_client_or_404(request.user, id=id)
-    menus = client.menus.annotate(dishes_count=Count('menuintake')).order_by('-date_ini')
+    # Comidas por dia: cada toma sin meal_group cuenta como una comida y las
+    # tomas de un mismo meal_group (entrante/principal/postre) como una sola,
+    # igual que _infer_meal_slots_from_menu.
+    menus = client.menus.annotate(
+        meals_per_day=(
+            Count('menuintake__intake', filter=Q(menuintake__intake__meal_group=''), distinct=True)
+            + Count('menuintake__intake__meal_group', filter=~Q(menuintake__intake__meal_group=''), distinct=True)
+        ),
+    ).order_by('-date_ini')
     for menu in menus:
         menu.days_count = (menu.date_fin - menu.date_ini).days + 1
     return render(request, 'admin/client_diets.html', {'client': client, 'menus': menus})
@@ -477,7 +536,7 @@ def edit_menu_intake(request, client_id, menu_id, item_id):
         'dish_id': item.dish_id,
         'quantity': item.quantity,
         'is_free_meal': item.is_free_meal,
-        'options': [{'id': dish.id, 'name': dish.name} for dish in dish_options],
+        'options': [{'id': dish.id, 'name': dish.name, 'active': dish.active} for dish in dish_options],
     })
 
 

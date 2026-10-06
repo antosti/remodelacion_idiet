@@ -10,7 +10,7 @@ from FoodGroup.models import FoodGroup
 from Micronutrients.models import Micronutrient
 from Products.models import Product, ProductMicronutrient
 from SuperGroup.models import SuperGroup
-from idiet.permissions import scoped_queryset
+from idiet.permissions import scoped_queryset, is_admin_user
 from idiet.views import paginate_queryset
 
 
@@ -168,7 +168,11 @@ def create_food(request):
 
 @login_required
 def edit_food(request, id):
-    product = get_object_or_404(Product, id=id, is_active=True)
+    product = get_object_or_404(
+        scoped_queryset(Product.objects.all(), request.user, include_unassigned=True),
+        id=id,
+        is_active=True,
+    )
     food_groups = FoodGroup.objects.all()
     super_groups = SuperGroup.objects.all()
 
@@ -177,8 +181,15 @@ def edit_food(request, id):
         english_name = request.POST.get('english_name', '').strip()
         super_group_ids = request.POST.getlist('super_group')
         micronutrient_sections = get_food_micronutrient_sections()
+        is_shared_copy = product.user_id is None and not is_admin_user(request.user)
 
         with transaction.atomic():
+            if is_shared_copy:
+                # Un usuario no admin no puede modificar un alimento compartido:
+                # se crea una copia personal y el original queda intacto.
+                original = product
+                product = Product(ed_porc=original.ed_porc, is_active=True, user=request.user)
+
             product.food_name = name
             product.food_name_spanish = name
             product.food_name_eng = english_name or name
@@ -191,6 +202,17 @@ def edit_food(request, id):
             product.save()
 
             product.super_groups.set(super_group_ids)
+
+            if is_shared_copy:
+                # Se conservan los micronutrientes que el formulario no expone.
+                ProductMicronutrient.objects.bulk_create([
+                    ProductMicronutrient(
+                        product=product,
+                        micronutrient_id=pm.micronutrient_id,
+                        value=pm.value,
+                    )
+                    for pm in ProductMicronutrient.objects.filter(product=original)
+                ])
 
             for section in micronutrient_sections:
                 for micronutrient in section['micronutrients']:
@@ -209,7 +231,10 @@ def edit_food(request, id):
                         defaults={'value': value},
                     )
 
-        messages.success(request, 'Alimento actualizado correctamente')
+        if is_shared_copy:
+            messages.success(request, 'Se ha creado una copia personal del alimento compartido.')
+        else:
+            messages.success(request, 'Alimento actualizado correctamente')
         return redirect('list_active_foods')
 
     return render(request, 'admin/edit_food.html', {
@@ -291,7 +316,9 @@ def get_foods_list_context(request, products):
 @login_required
 def deactivate_food(request, id):
     if request.method == 'POST':
-        product = get_object_or_404(Product, id=id, is_active=True)
+        product = get_object_or_404(
+            scoped_queryset(Product.objects.all(), request.user), id=id, is_active=True
+        )
         product.is_active = False
         product.save(update_fields=['is_active'])
         messages.success(request, 'Alimento desactivado correctamente')
@@ -303,7 +330,7 @@ def deactivate_food(request, id):
 def deactivate_foods_bulk(request):
     if request.method == 'POST':
         product_ids = request.POST.getlist('selected_foods')
-        count = Product.objects.filter(
+        count = scoped_queryset(Product.objects.all(), request.user).filter(
             id__in=product_ids,
             is_active=True,
         ).update(is_active=False)
@@ -325,7 +352,9 @@ def deactivate_foods_bulk(request):
 @login_required
 def reactivate_food(request, id):
     if request.method == 'POST':
-        product = get_object_or_404(Product, id=id, is_active=False)
+        product = get_object_or_404(
+            scoped_queryset(Product.objects.all(), request.user), id=id, is_active=False
+        )
         product.is_active = True
         product.save(update_fields=['is_active'])
         messages.success(request, 'Alimento reactivado correctamente')
@@ -337,7 +366,7 @@ def reactivate_food(request, id):
 def reactivate_foods_bulk(request):
     if request.method == 'POST':
         product_ids = request.POST.getlist('selected_foods')
-        count = Product.objects.filter(
+        count = scoped_queryset(Product.objects.all(), request.user).filter(
             id__in=product_ids,
             is_active=False,
         ).update(is_active=True)
@@ -359,7 +388,9 @@ def reactivate_foods_bulk(request):
 @login_required
 def delete_food(request, id):
     if request.method == 'POST':
-        product = get_object_or_404(Product, id=id, is_active=False)
+        product = get_object_or_404(
+            scoped_queryset(Product.objects.all(), request.user), id=id, is_active=False
+        )
         product.delete()
         messages.success(request, 'Alimento eliminado definitivamente')
 
@@ -370,7 +401,7 @@ def delete_food(request, id):
 def delete_foods_bulk(request):
     if request.method == 'POST':
         product_ids = request.POST.getlist('selected_foods')
-        products = Product.objects.filter(
+        products = scoped_queryset(Product.objects.all(), request.user).filter(
             id__in=product_ids,
             is_active=False,
         )
@@ -406,7 +437,7 @@ def list_active_foods(request):
 @login_required
 def list_deactive_foods(request):
     products = scoped_queryset(
-        Product.objects.filter(is_active=False), request.user, include_unassigned=True
+        Product.objects.filter(is_active=False), request.user, include_unassigned=False
     )
 
     context = get_foods_list_context(request, products)

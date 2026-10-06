@@ -226,9 +226,11 @@
                     {% for product in products %}
                     <tr class="hover:bg-gray-50">
                         <td class="px-4 py-4 border-b border-gray-100">
+                            {% if product.user_id or request.user.is_staff or request.user.is_superuser %}
                             <input type="checkbox"
                                 class="food-checkbox rounded border-gray-300 text-secondary focus:ring-secondary/30"
                                 data-food-id="{{ product.id }}">
+                            {% endif %}
                         </td>
                         <td class="px-4 py-4 text-gray-700 border-b border-gray-100">
                             {{ product.food_name_spanish }}
@@ -258,6 +260,7 @@
                                     Editar
                                 </a>
 
+                                {% if product.user_id or request.user.is_staff or request.user.is_superuser %}
                                 <form method="POST" action="{% url 'deactivate_food' product.id %}"
                                     data-confirm="¿Desactivar este alimento?">
                                     {% csrf_token %}
@@ -266,6 +269,7 @@
                                         Desactivar
                                     </button>
                                 </form>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>

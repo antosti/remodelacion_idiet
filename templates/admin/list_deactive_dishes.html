@@ -292,6 +292,7 @@
                         </td>
                         <td class="px-4 py-4 border-b border-gray-100">
                             <div class="flex justify-center gap-2">
+                                {% if dish.user_id or request.user.is_staff or request.user.is_superuser %}
                                 <form method="POST" action="{% url 'reactivate_dish' dish.id %}">
                                     {% csrf_token %}
                                     <button type="submit"
@@ -307,6 +308,7 @@
                                         Eliminar
                                     </button>
                                 </form>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>

@@ -13,4 +13,6 @@ urlpatterns = [
          views.regenerate_menu, name='regenerate_menu'),
     path('clients/<int:client_id>/diets/<int:menu_id>/delete/',
          views.delete_menu, name='delete_menu'),
+    path('clients/<int:client_id>/diets/<int:menu_id>/save-as-template/',
+         views.save_menu_as_template, name='save_menu_as_template'),
 ]

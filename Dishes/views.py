@@ -10,11 +10,11 @@ from Dishes.models import Dish, DishProduct
 from Micronutrients.models import Micronutrient
 from Products.models import Product
 from idiet.views import paginate_queryset
-from idiet.permissions import scoped_queryset
+from idiet.permissions import scoped_queryset, is_admin_user
 from django.contrib.auth.decorators import login_required
 
 
-def get_dish_ingredient_pairs(request):
+def get_dish_ingredient_pairs(request, existing_product_ids=()):
     product_ids = request.POST.getlist('ingredient_product_id')
     quantities = request.POST.getlist('ingredient_quantity')
 
@@ -37,12 +37,26 @@ def get_dish_ingredient_pairs(request):
     if not pairs:
         return []
 
+    requested_ids = [product_id for product_id, _ in pairs]
+
     valid_product_ids = set(
-        Product.objects.filter(
-            id__in=[product_id for product_id, _ in pairs],
-            is_active=True,
+        scoped_queryset(
+            Product.objects.filter(is_active=True), request.user, include_unassigned=True
+        ).filter(
+            id__in=requested_ids,
         ).values_list('id', flat=True)
     )
+
+    # Los ingredientes que ya tiene la receta se aceptan aunque queden fuera
+    # del scoping del editor (siguen exigiendo is_active=True).
+    existing_ids = {int(product_id) for product_id in existing_product_ids}
+    if existing_ids:
+        valid_product_ids |= set(
+            Product.objects.filter(
+                is_active=True,
+                id__in=[pid for pid in requested_ids if int(pid) in existing_ids],
+            ).values_list('id', flat=True)
+        )
 
     return [
         (product_id, quantity)
@@ -227,8 +241,10 @@ def get_dish_context(request, active=True):
     sort = request.GET.get('sort', 'name').strip()
     direction = request.GET.get('direction', 'asc').strip()
 
+    # Los platos compartidos (user=NULL) solo son visibles en desactivados
+    # para staff: el resto de usuarios no puede reactivarlos ni eliminarlos.
     dishes = scoped_queryset(
-        Dish.objects.filter(active=active), request.user, include_unassigned=True
+        Dish.objects.filter(active=active), request.user, include_unassigned=active
     ).prefetch_related('dishproduct_set__product')
 
     if dish_name:
@@ -245,6 +261,7 @@ def get_dish_context(request, active=True):
         dish_list.append({
             'id': dish.id,
             'name': dish.name,
+            'user_id': dish.user_id,
             'kcal_100g': nutrition['kcal_100g'],
             'carbs_100g': nutrition['carbs_100g'],
             'protein_100g': nutrition['protein_100g'],
@@ -303,12 +320,32 @@ def list_deactive_dishes(request):
 
 @login_required
 def edit_dish(request, id):
-    dish = get_object_or_404(Dish, id=id, active=True)
+    dish = get_object_or_404(
+        scoped_queryset(Dish.objects.all(), request.user, include_unassigned=True),
+        id=id,
+        active=True,
+    )
 
     if request.method == 'POST':
-        ingredient_pairs = get_dish_ingredient_pairs(request)
+        # Se calculan sobre la receta original, antes de copiarla o borrar filas.
+        ingredient_pairs = get_dish_ingredient_pairs(
+            request,
+            existing_product_ids=dish.dishproduct_set.values_list('product_id', flat=True),
+        )
+        is_shared_copy = dish.user_id is None and not is_admin_user(request.user)
 
         with transaction.atomic():
+            if is_shared_copy:
+                # Un usuario no admin no puede modificar una receta compartida:
+                # se crea una copia personal y el original queda intacto.
+                dish = Dish(
+                    language=dish.language,
+                    active=True,
+                    dish_category=dish.dish_category,
+                    dish_category_size=dish.dish_category_size,
+                    user=request.user,
+                )
+
             dish.name = request.POST.get('recipe_name')
             dish.recipe_elaboration = request.POST.get('description')
             dish.dish_type = request.POST.get('dish_type') or Dish.DishType.MAIN
@@ -320,7 +357,10 @@ def edit_dish(request, id):
             for product_id, quantity in ingredient_pairs:
                 DishProduct.objects.create(dish=dish, product_id=product_id, quantity=quantity)
 
-        messages.success(request, 'La receta se ha actualizado correctamente.')
+        if is_shared_copy:
+            messages.success(request, 'Se ha creado una copia personal de la receta compartida.')
+        else:
+            messages.success(request, 'La receta se ha actualizado correctamente.')
         return redirect('list_active_dishes')
 
     intakes = Intake.objects.all().order_by('order')
@@ -357,7 +397,7 @@ def edit_dish(request, id):
 @login_required
 @require_POST
 def deactivate_dish(request, id):
-    dish = get_object_or_404(Dish, id=id, active=True)
+    dish = get_object_or_404(scoped_queryset(Dish.objects.all(), request.user), id=id, active=True)
     dish.active = False
     dish.save(update_fields=['active'])
     messages.success(request, 'La receta se ha desactivado correctamente.')
@@ -367,7 +407,7 @@ def deactivate_dish(request, id):
 @login_required
 @require_POST
 def reactivate_dish(request, id):
-    dish = get_object_or_404(Dish, id=id, active=False)
+    dish = get_object_or_404(scoped_queryset(Dish.objects.all(), request.user), id=id, active=False)
     dish.active = True
     dish.save(update_fields=['active'])
     messages.success(request, 'La receta se ha reactivado correctamente.')
@@ -377,7 +417,7 @@ def reactivate_dish(request, id):
 @login_required
 @require_POST
 def delete_dish(request, id):
-    dish = get_object_or_404(Dish, id=id, active=False)
+    dish = get_object_or_404(scoped_queryset(Dish.objects.all(), request.user), id=id, active=False)
     dish.delete()
     messages.success(request, 'La receta se ha eliminado definitivamente.')
     return redirect('list_deactive_dishes')

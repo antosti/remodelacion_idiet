@@ -114,6 +114,13 @@ class TemplateDetailViewTests(TestCase):
         response = self.client.get(reverse('template_detail', args=[self.template.id]))
         self.assertEqual(response.status_code, 200)
 
+    def test_edit_modal_has_recipe_link(self):
+        self.client.force_login(self.nutri)
+        response = self.client.get(reverse('template_detail', args=[self.template.id]))
+        self.assertContains(response, 'id="edit-intake-recipe-link"')
+        self.assertContains(response, 'target="_blank"')
+        self.assertContains(response, 'data-url-template="%s"' % reverse('edit_dish', args=[0]))
+
     def test_other_nutri_gets_404(self):
         self.client.force_login(self.other_nutri)
         response = self.client.get(reverse('template_detail', args=[self.template.id]))
@@ -250,6 +257,34 @@ class DeactivatedTemplateAccessTests(TestCase):
         self.assertEqual(response.status_code, 404)
 
 
+class TemplateDetailEditUrlsTests(TestCase):
+
+    def setUp(self):
+        self.nutri = make_nutri('tpl_urls1@example.com')
+        _, groups = get_meal_structure()
+        self.main_intake = groups['comida']['main']
+
+    def _detail(self, active):
+        template = make_template(self.nutri, active=active)
+        TemplateIntake.objects.create(
+            template=template, dish=None, intake=self.main_intake,
+            quantity=0, kcal=Decimal('0'), menu_day=0, intake_alias='Plato principal - Comida',
+        )
+        self.client.force_login(self.nutri)
+        return self.client.get(reverse('template_detail', args=[template.id]))
+
+    def test_active_template_renders_edit_and_copy_urls(self):
+        response = self._detail(active=True)
+        self.assertContains(response, 'data-edit-url=')
+        self.assertContains(response, 'data-copy-url=')
+
+    def test_inactive_template_does_not_render_edit_or_copy_urls(self):
+        response = self._detail(active=False)
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, 'data-edit-url=')
+        self.assertNotContains(response, 'data-copy-url=')
+
+
 class EditTemplateViewTests(TestCase):
 
     def setUp(self):
@@ -334,6 +369,18 @@ class EditTemplateIntakeViewTests(TestCase):
         option_ids = {opt['id'] for opt in data['options']}
         self.assertIn(self.dish_main.id, option_ids)
         self.assertIn(self.dish_main_alt.id, option_ids)
+
+    def test_get_options_flag_active_and_prepend_deactivated_current_dish(self):
+        self.dish_main_alt.active = False
+        self.dish_main_alt.save(update_fields=['active'])
+        self.item.dish = self.dish_main_alt
+        self.item.save(update_fields=['dish'])
+        self.client.force_login(self.nutri)
+        options = self.client.get(self._url()).json()['options']
+        by_id = {opt['id']: opt for opt in options}
+        self.assertIs(by_id[self.dish_main_alt.id]['active'], False)
+        self.assertIs(by_id[self.dish_main.id]['active'], True)
+        self.assertEqual(options[0]['id'], self.dish_main_alt.id)
 
     def test_post_assigns_dish_and_recalculates_kcal(self):
         self.client.force_login(self.nutri)

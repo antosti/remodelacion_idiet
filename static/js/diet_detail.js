@@ -14,10 +14,33 @@ document.addEventListener('DOMContentLoaded', function () {
     const freeMealCheckbox = document.getElementById('edit-intake-free-meal');
     const errorLabel = document.getElementById('edit-intake-error');
 
+    const recipeLink = document.getElementById('edit-intake-recipe-link');
+
+    function updateRecipeLink() {
+        if (!recipeLink) return;
+        const id = parseInt(dishSelect.value, 10);
+        const isFree = freeMealCheckbox && freeMealCheckbox.checked;
+        const selectedOption = dishSelect.options[dishSelect.selectedIndex];
+        const isInactive = !!selectedOption && selectedOption.dataset.active === '0';
+        if (isFree || isInactive || !(id > 0) || String(id) !== dishSelect.value) {
+            recipeLink.classList.add('hidden');
+            recipeLink.setAttribute('href', '#');
+            return;
+        }
+        recipeLink.setAttribute(
+            'href',
+            recipeLink.dataset.urlTemplate.replace(/\/0\/edit\/$/, '/' + id + '/edit/')
+        );
+        recipeLink.classList.remove('hidden');
+    }
+
     function applyFreeMealState(isFree) {
         dishSelect.disabled = isFree;
         quantityInput.disabled = isFree;
+        updateRecipeLink();
     }
+
+    dishSelect.addEventListener('change', updateRecipeLink);
 
     if (freeMealCheckbox) {
         freeMealCheckbox.addEventListener('change', function () {
@@ -68,7 +91,7 @@ document.addEventListener('DOMContentLoaded', function () {
             rowHeader.title = active ? 'Bloquear/desbloquear toda la fila' : '';
         });
         if (regenerateBanner) regenerateBanner.classList.toggle('hidden', !active);
-        if (regenerateToggleBtn) regenerateToggleBtn.textContent = active ? 'Salir del modo bloqueo' : 'Rehacer menú';
+        if (regenerateToggleBtn) regenerateToggleBtn.textContent = active ? 'Salir del modo bloqueo' : 'Ajustar menú';
         updateLockCount();
     }
 
@@ -223,6 +246,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     const el = document.createElement('option');
                     el.value = opt.id;
                     el.textContent = opt.name;
+                    el.dataset.active = opt.active === false ? '0' : '1';
                     if (opt.id === data.dish_id) {
                         el.selected = true;
                     }
@@ -435,5 +459,31 @@ document.addEventListener('DOMContentLoaded', function () {
                 saveBtn.disabled = false;
                 saveBtn.textContent = 'Guardar';
             });
+    });
+});
+
+// Modal "Guardar como plantilla": solo abre/cierra; el envio es un POST normal.
+document.addEventListener('DOMContentLoaded', function () {
+    const openBtn = document.getElementById('save-template-btn');
+    const modal = document.getElementById('save-template-modal');
+    if (!openBtn || !modal) {
+        return;
+    }
+    const cancelBtn = document.getElementById('save-template-cancel');
+    const nameInput = document.getElementById('save-template-name');
+
+    openBtn.addEventListener('click', function () {
+        modal.classList.remove('hidden');
+        if (nameInput) {
+            nameInput.select();
+        }
+    });
+    cancelBtn.addEventListener('click', function () {
+        modal.classList.add('hidden');
+    });
+    modal.addEventListener('click', function (event) {
+        if (event.target === modal) {
+            modal.classList.add('hidden');
+        }
     });
 });

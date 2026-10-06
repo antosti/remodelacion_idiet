@@ -26,7 +26,7 @@
                     <th class="px-5 py-3">Fecha inicio</th>
                     <th class="px-5 py-3">Fecha fin</th>
                     <th class="px-5 py-3">Duración</th>
-                    <th class="px-5 py-3">Platos</th>
+                    <th class="px-5 py-3">Ingestas/día</th>
                     <th class="px-5 py-3"></th>
                 </tr>
             </thead>
@@ -36,7 +36,7 @@
                     <td class="px-5 py-3 text-gray-700">{{ menu.date_ini|date:'d/m/Y' }}</td>
                     <td class="px-5 py-3 text-gray-700">{{ menu.date_fin|date:'d/m/Y' }}</td>
                     <td class="px-5 py-3 text-gray-700">{{ menu.days_count }} día{{ menu.days_count|pluralize }}</td>
-                    <td class="px-5 py-3 text-gray-700">{{ menu.dishes_count }}</td>
+                    <td class="px-5 py-3 text-gray-700">{{ menu.meals_per_day }}</td>
                     <td class="px-5 py-3 text-right">
                         <div class="flex items-center justify-end gap-2">
                             <a href="{% url 'diet_detail' client.id menu.id %}"

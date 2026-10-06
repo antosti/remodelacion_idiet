@@ -296,6 +296,7 @@
                                     class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">
                                     Editar
                                 </a>
+                                {% if dish.user_id or request.user.is_staff or request.user.is_superuser %}
                                 <form method="POST" action="{% url 'deactivate_dish' dish.id %}">
                                     {% csrf_token %}
                                     <button type="submit" data-confirm="¿Desactivar esta receta?"
@@ -303,6 +304,7 @@
                                         Desactivar
                                     </button>
                                 </form>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>

@@ -19,16 +19,20 @@
             {% if can_regenerate and weeks %}
             <button type="button" id="regenerate-toggle-btn"
                 class="h-10 px-3 py-1 border rounded-lg bg-idiet text-white text-sm font-semibold">
-                Rehacer menú
+                Ajustar menú
             </button>
             {% endif %}
+            <button type="button" id="save-template-btn"
+                class="h-10 px-3 py-1 border rounded-lg border-idiet text-idiet text-sm font-semibold hover:bg-gray-50">
+                Guardar como plantilla
+            </button>
         </div>
     </div>
 
     {% if can_regenerate and weeks %}
     <div id="regenerate-banner" class="hidden mb-4 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200 text-sm text-amber-800 flex items-center justify-between gap-4">
         <span>
-            Selecciona los platos que quieres mantener y pulsa «Confirmar regeneración».
+            Selecciona los platos que quieres mantener y pulsa «Recalcular menú».
             Se borrará esta dieta y se creará una nueva; los platos marcados se mantendrán en su sitio.
             (<span id="regenerate-count">0</span> seleccionados)
         </span>
@@ -39,7 +43,7 @@
             </button>
             <button type="button" id="regenerate-confirm-btn"
                 class="px-3 py-1.5 rounded-lg bg-idiet text-white text-xs font-semibold hover:bg-idiet/90">
-                Confirmar regeneración
+                Recalcular menú
             </button>
         </div>
     </div>
@@ -143,7 +147,32 @@
         </a>
     </div>
 
-    <div id="regenerate-confirm-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+    <div id="save-template-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <form method="post" action="{% url 'save_menu_as_template' client.id menu.id %}"
+            class="bg-white rounded-2xl shadow-lg w-full max-w-md mx-4 p-5 space-y-4">
+            {% csrf_token %}
+            <h3 class="text-lg font-semibold text-gray-700">Guardar como plantilla</h3>
+            <p class="text-sm text-gray-500">
+                Se creará una plantilla con todos los platos, cantidades y comidas libres de esta dieta tal y como están ahora.
+            </p>
+            <div>
+                <label for="save-template-name" class="block text-sm font-medium text-gray-700 mb-1">Nombre de la plantilla</label>
+                <input type="text" name="name" id="save-template-name" required maxlength="200"
+                    value="Dieta {{ client.first_name }} {{ client.last_name }} {{ menu.date_ini|date:'d/m/Y' }}"
+                    class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" id="save-template-cancel" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50">
+                    Cancelar
+                </button>
+                <button type="submit" class="px-4 py-2 rounded-lg bg-idiet text-white font-medium hover:bg-idiet/90">
+                    Guardar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div id="regenerate-confirm-modal"class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
         <div class="bg-white rounded-2xl shadow-lg w-full max-w-md mx-4 p-5 space-y-4">
             <h3 class="text-lg font-semibold text-gray-700">Rehacer dieta</h3>
             <p class="text-sm text-gray-500">
@@ -162,7 +191,7 @@
     </div>
 
     <div id="edit-intake-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-        <div class="bg-white rounded-2xl shadow-lg w-full max-w-md mx-4 p-5 space-y-4">
+        <div class="bg-white rounded-2xl shadow-lg w-full max-w-xl mx-4 p-5 space-y-4">
             <div class="flex items-center justify-between">
                 <h3 id="edit-intake-alias" class="text-lg font-semibold text-gray-700"></h3>
                 <button type="button" id="edit-intake-close" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
@@ -176,22 +205,25 @@
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Plato</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Modificar plato</label>
                 <select id="edit-intake-dish" class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm"></select>
             </div>
 
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Cantidad (g)</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Modificar cantidad (g)</label>
                 <input type="number" id="edit-intake-quantity" min="1" class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
             </div>
 
             <p id="edit-intake-error" class="hidden text-sm text-red-600"></p>
 
             <div class="flex justify-between items-center gap-3 pt-2">
-                <button type="button" id="edit-intake-copy"
-                    class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50">
-                    Copiar
-                </button>
+                <div class="flex gap-3">
+                    <button type="button" id="edit-intake-copy"
+                        class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50">
+                        Copiar
+                    </button>
+                    <a id="edit-intake-recipe-link" href="#" target="_blank" rel="noopener" data-url-template="{% url 'edit_dish' 0 %}" class="hidden px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50">Ver receta</a>
+                </div>
                 <div class="flex gap-3">
                     <button type="button" id="edit-intake-cancel" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50">Cancelar</button>
                     <button type="button" id="edit-intake-save" class="px-4 py-2 rounded-lg bg-idiet text-white font-medium hover:bg-idiet/90">Guardar</button>

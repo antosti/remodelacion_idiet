@@ -362,7 +362,7 @@ def edit_template_intake(request, template_id, item_id):
         'dish_id': item.dish_id,
         'quantity': item.quantity,
         'is_free_meal': item.is_free_meal,
-        'options': [{'id': dish.id, 'name': dish.name} for dish in dish_options],
+        'options': [{'id': dish.id, 'name': dish.name, 'active': dish.active} for dish in dish_options],
     })
 
 

@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // Paso 3: mostrar el input de gramos máximos solo si se marca el check.
+    // Paso 2: mostrar el input de gramos máximos solo si se marca el check.
     const limitPortionCheckbox = document.getElementById('limit-portion-checkbox');
     const maxPortionWrapper = document.getElementById('max-portion-wrapper');
     if (limitPortionCheckbox && maxPortionWrapper) {
@@ -100,9 +100,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 const selectedOption = templateSelect ? templateSelect.options[templateSelect.selectedIndex] : null;
                 const templateName = selectedOption ? selectedOption.textContent.trim() : '-';
 
+                const templateKcal = fieldValue('target_kcal');
+
                 lines = [
                     'Fecha de inicio: ' + startDate,
                     'Se creará a partir de la plantilla: ' + templateName,
+                    'Objetivo kcal/día: ' + (templateKcal ? templateKcal + ' (cantidades escaladas proporcionalmente)' : 'el de la plantilla'),
                 ];
             } else {
                 const meals = [];

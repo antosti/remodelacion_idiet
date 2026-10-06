@@ -6,8 +6,11 @@ from Menus.generator.pools import build_candidate_pools
 # Si el mejor dia de una tanda del GA se sale de algun target.micro_ranges, se
 # vuelve a generar desde cero hasta este numero de intentos; si ninguno entra
 # en rango, se usa el de menor fitness de todos los intentos (ver
-# _generate_day_within_ranges).
-MAX_DAY_ATTEMPTS = 10
+# _generate_day_within_ranges). Bajado de 10 a 5 para reducir a la mitad el
+# tiempo de generacion: en el benchmark replicate_micro_week_test (20 combos,
+# seeds 42 y 7) mantuvo macros y fitness medio (+1.4%), con el colesterol
+# como unico micro algo peor (75% -> 85% de combos fuera de rango).
+MAX_DAY_ATTEMPTS = 5
 
 
 class GenerationError(Exception):

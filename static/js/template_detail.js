@@ -14,10 +14,33 @@ document.addEventListener('DOMContentLoaded', function () {
     const freeMealCheckbox = document.getElementById('edit-intake-free-meal');
     const errorLabel = document.getElementById('edit-intake-error');
 
+    const recipeLink = document.getElementById('edit-intake-recipe-link');
+
+    function updateRecipeLink() {
+        if (!recipeLink) return;
+        const id = parseInt(dishSelect.value, 10);
+        const isFree = freeMealCheckbox && freeMealCheckbox.checked;
+        const selectedOption = dishSelect.options[dishSelect.selectedIndex];
+        const isInactive = !!selectedOption && selectedOption.dataset.active === '0';
+        if (isFree || isInactive || !(id > 0) || String(id) !== dishSelect.value) {
+            recipeLink.classList.add('hidden');
+            recipeLink.setAttribute('href', '#');
+            return;
+        }
+        recipeLink.setAttribute(
+            'href',
+            recipeLink.dataset.urlTemplate.replace(/\/0\/edit\/$/, '/' + id + '/edit/')
+        );
+        recipeLink.classList.remove('hidden');
+    }
+
     function applyFreeMealState(isFree) {
         dishSelect.disabled = isFree;
         quantityInput.disabled = isFree;
+        updateRecipeLink();
     }
+
+    dishSelect.addEventListener('change', updateRecipeLink);
 
     if (freeMealCheckbox) {
         freeMealCheckbox.addEventListener('change', function () {
@@ -99,6 +122,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     const el = document.createElement('option');
                     el.value = opt.id;
                     el.textContent = opt.name;
+                    el.dataset.active = opt.active === false ? '0' : '1';
                     if (opt.id === data.dish_id) {
                         el.selected = true;
                     }
