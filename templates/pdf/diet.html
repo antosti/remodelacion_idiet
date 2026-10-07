@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<style>
+    @page { size: a4 landscape; margin: 1.2cm; }
+    body { font-family: Helvetica, Arial, sans-serif; font-size: 8pt; color: #374151; }
+    h1 { font-size: 15pt; margin: 0 0 2pt 0; color: #1f2937; }
+    .subtitle { font-size: 9pt; color: #6b7280; margin-bottom: 8pt; }
+    table { width: 100%; }
+    th, td { border: 0.5pt solid #d1d5db; padding: 3pt; vertical-align: top; }
+    th { background-color: #f3f4f6; font-size: 8pt; }
+    td.alias { background-color: #f9fafb; font-weight: bold; width: 11%; }
+    td.empty { background-color: #f3f4f6; }
+    .dish { font-weight: bold; color: #1f2937; }
+    .meta { color: #6b7280; font-size: 7pt; }
+    .free { color: #6b7280; font-style: italic; }
+    tr.totals td { background-color: #f3f4f6; font-size: 7pt; }
+    .week-break { page-break-before: always; }
+</style>
+</head>
+<body>
+{% for week in weeks %}
+<div{% if not forloop.first %} class="week-break"{% endif %}>
+    <h1>Dieta — {{ client.first_name }} {{ client.last_name }}</h1>
+    <div class="subtitle">
+        Del {{ menu.date_ini|date:'d/m/Y' }} al {{ menu.date_fin|date:'d/m/Y' }}
+        {% if weeks|length > 1 %} · Semana {{ forloop.counter }} de {{ weeks|length }}{% endif %}
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th></th>
+                {% for day in week.days %}
+                <th>{{ day.weekday_name }}<br>{{ day.date|date:'d/m' }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in week.rows %}
+            <tr>
+                <td class="alias">{{ row.alias }}</td>
+                {% for cell in row.cells %}
+                {% if cell.item %}
+                <td>
+                    {% if cell.item.is_free_meal %}
+                    <span class="free">Comida libre</span>
+                    {% else %}
+                    <span class="dish">{{ cell.item.dish.name }}</span><br>
+                    <span class="meta">{{ cell.item.quantity }} g · {{ cell.item.kcal|floatformat:0 }} kcal</span>
+                    {% endif %}
+                </td>
+                {% else %}
+                <td class="empty"></td>
+                {% endif %}
+                {% endfor %}
+            </tr>
+            {% endfor %}
+            <tr class="totals">
+                <td class="alias">Total día</td>
+                {% for day in week.days %}
+                <td>
+                    {% if day.totals %}
+                    {{ day.totals.kcal|floatformat:0 }} kcal<br>
+                    P {{ day.totals.prot|floatformat:1 }}g · G {{ day.totals.fat|floatformat:1 }}g · H {{ day.totals.carb|floatformat:1 }}g
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% empty %}
+<h1>Dieta — {{ client.first_name }} {{ client.last_name }}</h1>
+<p>Esta dieta no tiene platos asignados.</p>
+{% endfor %}
+</body>
+</html>

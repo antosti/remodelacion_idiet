@@ -15,4 +15,8 @@ urlpatterns = [
          views.delete_menu, name='delete_menu'),
     path('clients/<int:client_id>/diets/<int:menu_id>/save-as-template/',
          views.save_menu_as_template, name='save_menu_as_template'),
+    path('clients/<int:client_id>/diets/<int:menu_id>/pdf/',
+         views.download_menu_pdf, name='download_menu_pdf'),
+    path('clients/<int:client_id>/diets/<int:menu_id>/send-pdf/',
+         views.send_menu_pdf, name='send_menu_pdf'),
 ]

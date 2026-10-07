@@ -1,0 +1,8 @@
+<div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
+    <h2 style="color: #1f2937;">Tu dieta de iDiet</h2>
+    <p>Hola {{ client.first_name }},</p>
+    <p>Te adjuntamos en PDF tu dieta para el periodo del <strong>{{ menu.date_ini|date:'d/m/Y' }}</strong> al <strong>{{ menu.date_fin|date:'d/m/Y' }}</strong>.</p>
+    <p>Si tienes cualquier duda, puedes responder directamente a este correo.</p>
+    <p style="margin-top: 24px;">Un saludo,<br>{{ nutritionist.first_name }} {{ nutritionist.last_name }}</p>
+    <p style="color: #6b7280; font-size: 12px;">Este correo se ha enviado desde iDiet.</p>
+</div>

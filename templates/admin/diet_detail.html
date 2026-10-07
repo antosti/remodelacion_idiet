@@ -26,6 +26,17 @@
                 class="h-10 px-3 py-1 border rounded-lg border-idiet text-idiet text-sm font-semibold hover:bg-gray-50">
                 Guardar como plantilla
             </button>
+            <a href="{% url 'download_menu_pdf' client.id menu.id %}" id="download-pdf-btn"
+                class="h-10 flex items-center px-3 py-1 border rounded-lg border-idiet text-idiet text-sm font-semibold hover:bg-gray-50">
+                Descargar PDF
+            </a>
+            <form method="post" action="{% url 'send_menu_pdf' client.id menu.id %}">
+                {% csrf_token %}
+                <button type="submit" id="send-pdf-btn" title="Se enviará a {{ client.email|default:'(sin email)' }}"
+                    class="h-10 px-3 py-1 border rounded-lg border-idiet text-idiet text-sm font-semibold hover:bg-gray-50">
+                    Enviar por correo
+                </button>
+            </form>
         </div>
     </div>
 

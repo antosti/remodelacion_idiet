@@ -5,10 +5,14 @@ from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
+from django.core.mail import EmailMultiAlternatives
+from django.core.validators import validate_email
 from django.db import transaction
 from django.db.models import Count, Q, Sum
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
+from django.template.loader import render_to_string
 from django.views.decorators.http import require_http_methods
 
 from Dishes.models import Dish, DishCategorySize
@@ -23,6 +27,7 @@ from Menus.generator.pools import ROLE_TO_DISH_TYPES, _to_candidate
 from Menus.generator.service import GenerationError, generate_diet
 from Menus.generator.targets import attach_micro_ranges, default_target_for_client, macro_split_for_kcal
 from Menus.models import Menu, MenuIntake
+from Menus.pdf import diet_pdf_filename, render_diet_pdf
 from Plantillas.models import Template, TemplateIntake
 from Products.models import ProductExcluded
 
@@ -371,11 +376,10 @@ CANONICAL_ALIAS_ORDER = [
 ]
 
 
-@login_required
-def diet_detail(request, client_id, menu_id):
-    client = get_visible_client_or_404(request.user, id=client_id)
-    menu = get_object_or_404(Menu, id=menu_id, client=client)
-
+def _build_diet_weeks(menu):
+    """Semanas (lunes-domingo) de la dieta con una fila por intake_alias y
+    los totales de kcal/macros por dia. Lo usan diet_detail y el PDF de la
+    dieta (Menus.pdf)."""
     intakes = list(MenuIntake.objects.filter(menu=menu).select_related('dish'))
 
     nutrition_cache = {}
@@ -443,10 +447,77 @@ def diet_detail(request, client_id, menu_id):
             weeks.append({'days': days_info, 'rows': week_rows})
             current += timedelta(days=7)
 
+    return weeks
+
+
+@login_required
+def diet_detail(request, client_id, menu_id):
+    client = get_visible_client_or_404(request.user, id=client_id)
+    menu = get_object_or_404(Menu, id=menu_id, client=client)
+
+    weeks = _build_diet_weeks(menu)
+
     return render(request, 'admin/diet_detail.html', {
         'client': client, 'menu': menu, 'weeks': weeks,
         'can_regenerate': bool(weeks),
     })
+
+
+@login_required
+@require_http_methods(['GET'])
+def download_menu_pdf(request, client_id, menu_id):
+    client = get_visible_client_or_404(request.user, id=client_id)
+    menu = get_object_or_404(Menu, id=menu_id, client=client)
+
+    pdf = render_diet_pdf(client, menu, _build_diet_weeks(menu))
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{diet_pdf_filename(client, menu)}"'
+    return response
+
+
+@login_required
+@require_http_methods(['POST'])
+def send_menu_pdf(request, client_id, menu_id):
+    """Envia la dieta en PDF unicamente al email del propio cliente (no se
+    acepta ningun destinatario desde el formulario)."""
+    client = get_visible_client_or_404(request.user, id=client_id)
+    menu = get_object_or_404(Menu, id=menu_id, client=client)
+
+    recipient = (client.email or '').strip()
+    try:
+        validate_email(recipient)
+    except ValidationError:
+        messages.error(request, 'El cliente no tiene un email válido; no se ha enviado la dieta.')
+        return redirect('diet_detail', client_id=client.id, menu_id=menu.id)
+
+    context = {'client': client, 'menu': menu, 'nutritionist': request.user}
+    email = EmailMultiAlternatives(
+        subject='Tu dieta - iDiet',
+        body=(
+            f'Hola {client.first_name},\n\n'
+            f'Te adjuntamos en PDF tu dieta del {menu.date_ini:%d/%m/%Y} al {menu.date_fin:%d/%m/%Y}.\n\n'
+            f'Un saludo,\n{request.user.first_name} {request.user.last_name}'
+        ),
+        from_email=None,
+        to=[recipient],
+        reply_to=[request.user.email] if request.user.email else None,
+    )
+    email.attach_alternative(render_to_string('emails/diet_email.html', context), 'text/html')
+
+    try:
+        email.attach(
+            diet_pdf_filename(client, menu),
+            render_diet_pdf(client, menu, _build_diet_weeks(menu)),
+            'application/pdf',
+        )
+        email.send()
+    except Exception:
+        logger.exception('Error enviando la dieta %s por correo al cliente %s', menu.id, client.id)
+        messages.error(request, 'No se ha podido enviar la dieta por correo. Inténtelo de nuevo.')
+        return redirect('diet_detail', client_id=client.id, menu_id=menu.id)
+
+    messages.success(request, f'Dieta enviada por correo a {recipient}.')
+    return redirect('diet_detail', client_id=client.id, menu_id=menu.id)
 
 
 @login_required

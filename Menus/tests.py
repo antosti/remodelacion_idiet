@@ -1275,3 +1275,91 @@ class SaveMenuAsTemplateViewTests(TestCase):
 
         self.assertContains(response, 'id="save-template-btn"')
         self.assertContains(response, 'action="%s"' % self._url())
+
+
+class DietPdfViewTests(TestCase):
+
+    def setUp(self):
+        self.nutri = make_nutri('pdf_nutri@example.com')
+        self.client_obj = make_client(self.nutri)
+
+        product = make_product('Pollo', kcal=200, prot=30, fat=5, carb=0)
+        dish = make_dish('Pollo asado', Dish.DishType.MAIN, product)
+        _, groups = get_meal_structure()
+
+        self.menu = Menu.objects.create(
+            user=self.nutri, client=self.client_obj,
+            date_ini=date(2026, 9, 1), date_fin=date(2026, 9, 9),
+        )
+        MenuIntake.objects.create(
+            menu=self.menu, dish=dish, intake=groups['comida']['main'], quantity=150,
+            kcal=Decimal('300.00'), menu_day=0, intake_alias='Plato principal - Comida',
+        )
+        MenuIntake.objects.create(
+            menu=self.menu, dish=None, intake=groups['cena']['main'], quantity=0,
+            kcal=Decimal('0.00'), menu_day=8, intake_alias='Plato principal - Cena', is_free_meal=True,
+        )
+
+    def _download_url(self):
+        return reverse('download_menu_pdf', args=[self.client_obj.id, self.menu.id])
+
+    def _send_url(self):
+        return reverse('send_menu_pdf', args=[self.client_obj.id, self.menu.id])
+
+    def test_download_returns_pdf_attachment(self):
+        self.client.force_login(self.nutri)
+        response = self.client.get(self._download_url())
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertIn('attachment; filename="dieta_Ente_20260901.pdf"', response['Content-Disposition'])
+        self.assertTrue(response.content.startswith(b'%PDF'))
+
+    def test_download_other_nutri_gets_404(self):
+        self.client.force_login(make_nutri('pdf_other@example.com'))
+        self.assertEqual(self.client.get(self._download_url()).status_code, 404)
+
+    def test_send_emails_pdf_only_to_client(self):
+        from django.core import mail
+
+        self.client.force_login(self.nutri)
+        response = self.client.post(self._send_url(), {'email': 'intruso@example.com'})
+
+        self.assertRedirects(response, reverse('diet_detail', args=[self.client_obj.id, self.menu.id]))
+        self.assertEqual(len(mail.outbox), 1)
+        sent = mail.outbox[0]
+        self.assertEqual(sent.to, ['cliente@example.com'])
+        self.assertEqual(sent.reply_to, ['pdf_nutri@example.com'])
+        self.assertIn('01/09/2026', sent.alternatives[0][0])
+        filename, content, mimetype = sent.attachments[0]
+        self.assertEqual(filename, 'dieta_Ente_20260901.pdf')
+        self.assertEqual(mimetype, 'application/pdf')
+        self.assertTrue(content.startswith(b'%PDF'))
+
+    def test_send_without_client_email_sends_nothing(self):
+        from django.core import mail
+
+        Client.objects.filter(id=self.client_obj.id).update(email='')
+        self.client.force_login(self.nutri)
+        response = self.client.post(self._send_url(), follow=True)
+
+        self.assertEqual(len(mail.outbox), 0)
+        self.assertContains(response, 'El cliente no tiene un email válido')
+
+    def test_send_other_nutri_gets_404(self):
+        from django.core import mail
+
+        self.client.force_login(make_nutri('pdf_other2@example.com'))
+        self.assertEqual(self.client.post(self._send_url()).status_code, 404)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_send_get_not_allowed(self):
+        self.client.force_login(self.nutri)
+        self.assertEqual(self.client.get(self._send_url()).status_code, 405)
+
+    def test_diet_detail_shows_pdf_buttons(self):
+        self.client.force_login(self.nutri)
+        response = self.client.get(reverse('diet_detail', args=[self.client_obj.id, self.menu.id]))
+
+        self.assertContains(response, 'href="%s"' % self._download_url())
+        self.assertContains(response, 'action="%s"' % self._send_url())
