@@ -206,7 +206,10 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     document.querySelectorAll('.row-lock-toggle').forEach(function (rowHeader) {
-        rowHeader.addEventListener('click', function () {
+        rowHeader.addEventListener('click', function (evt) {
+            if (evt.target.closest('[data-remove-intake]')) {
+                return;
+            }
             if (lockMode) {
                 toggleRowLock(rowHeader);
             }
@@ -267,7 +270,15 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function patchCellFromResponse(cell, data) {
-        cell.querySelector('[data-field="dish-name"]').textContent = data.dish_name;
+        const nameEl = cell.querySelector('[data-field="dish-name"]');
+        nameEl.textContent = data.dish_name;
+        // Una celda "Sin asignar" usa estilo atenuado; al asignar plato recupera el normal.
+        nameEl.classList.remove('text-gray-400', 'text-gray-500', 'text-gray-700', 'italic', 'font-medium');
+        if (data.is_free_meal) {
+            nameEl.classList.add('text-gray-500', 'font-medium', 'italic');
+        } else {
+            nameEl.classList.add('text-gray-700', 'font-medium');
+        }
         if (data.is_free_meal) {
             cell.querySelector('[data-field="quantity-kcal"]').textContent = '';
             cell.querySelector('[data-field="macros"]').textContent = '';
@@ -380,6 +391,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     return resp.json();
                 })
                 .then(function (data) {
+                    if (!data.is_free_meal && !data.dish_id) {
+                        showError('Esta toma no tiene plato asignado, no se puede copiar.');
+                        return;
+                    }
                     if (!data.target_ids || !data.target_ids.length) {
                         showError('No hay celdas compatibles para pegar esta toma.');
                         return;
@@ -460,6 +475,48 @@ document.addEventListener('DOMContentLoaded', function () {
                 saveBtn.textContent = 'Guardar';
             });
     });
+});
+
+// Modales "Añadir ingesta" y "Eliminar ingesta": solo abren/cierran; el envio es un POST normal.
+document.addEventListener('DOMContentLoaded', function () {
+    function bindClose(modal, cancelBtn) {
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', function () {
+                modal.classList.add('hidden');
+            });
+        }
+        modal.addEventListener('click', function (event) {
+            if (event.target === modal) {
+                modal.classList.add('hidden');
+            }
+        });
+    }
+
+    const addBtn = document.getElementById('add-intake-btn');
+    const addModal = document.getElementById('add-intake-modal');
+    if (addBtn && addModal) {
+        addBtn.addEventListener('click', function () {
+            addModal.classList.remove('hidden');
+            const select = document.getElementById('add-intake-select');
+            if (select) select.focus();
+        });
+        bindClose(addModal, document.getElementById('add-intake-cancel'));
+    }
+
+    const removeModal = document.getElementById('remove-intake-modal');
+    const aliasInput = document.getElementById('remove-intake-alias-input');
+    const aliasLabel = document.getElementById('remove-intake-alias-label');
+    if (removeModal && aliasInput) {
+        document.querySelectorAll('[data-remove-intake]').forEach(function (btn) {
+            btn.addEventListener('click', function (evt) {
+                evt.stopPropagation();
+                aliasInput.value = btn.dataset.removeIntake;
+                if (aliasLabel) aliasLabel.textContent = btn.dataset.removeIntake;
+                removeModal.classList.remove('hidden');
+            });
+        });
+        bindClose(removeModal, document.getElementById('remove-intake-cancel'));
+    }
 });
 
 // Modal "Guardar como plantilla": solo abre/cierra; el envio es un POST normal.

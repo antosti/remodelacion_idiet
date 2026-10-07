@@ -1462,3 +1462,492 @@ class WizardMealOrderTests(TestCase):
     def test_template_wizard_lists_meals_chronologically(self):
         response = self.client.get(reverse('create_template'))
         self._assert_chronological(response.content.decode())
+
+
+class AddRemoveMenuIntakeViewTests(TestCase):
+    """add_menu_intake / remove_menu_intake: filas de ingesta vacias por dia."""
+
+    DAYS = 3
+
+    def setUp(self):
+        self.nutri = make_nutri('nutri_addrm@example.com')
+        self.client_obj = make_client(self.nutri)
+
+        self.product = make_product('Pollo', kcal=200, prot=30, fat=5, carb=0)
+        self.dish_main = make_dish('Pollo asado', Dish.DishType.MAIN, self.product)
+
+        self.standalone, self.groups = get_meal_structure()
+        self.assertTrue(self.standalone, 'Se esperaba al menos una Intake suelta sembrada')
+        self.single = self.standalone[0]
+        self.comida = self.groups['comida']
+        self.cena = self.groups['cena']
+
+        self.target = NutritionTarget(kcal=800, prot_g=60, fat_g=25, carb_g=80)
+        slot = MealSlotConfig(
+            key='group-comida', label='Comida', kind='group', intakes=self.comida,
+            include_starter=False, include_dessert=False,
+        )
+        self.config = DietConfig(
+            days=self.DAYS, start_date=date(2026, 9, 1), meal_slots=[slot], target=self.target,
+        )
+        days = generate_diet(self.client_obj, self.nutri, self.config)
+        self.menu = persist_generated_diet(self.nutri, self.client_obj, self.config, days)
+        self.main_alias = 'Plato principal - Comida'
+
+    def _add_url(self, menu=None):
+        return reverse('add_menu_intake', args=[self.client_obj.id, (menu or self.menu).id])
+
+    def _remove_url(self, menu=None):
+        return reverse('remove_menu_intake', args=[self.client_obj.id, (menu or self.menu).id])
+
+    def _detail_url(self, menu=None):
+        return reverse('diet_detail', args=[self.client_obj.id, (menu or self.menu).id])
+
+    def _rows(self, alias):
+        return MenuIntake.objects.filter(menu=self.menu, intake_alias=alias)
+
+    def _config(self):
+        self.menu.refresh_from_db()
+        return self.menu.generation_config
+
+    def _slot_keys(self):
+        return [s['key'] for s in self._config()['meal_slots']]
+
+    def _add_single(self):
+        self.client.force_login(self.nutri)
+        return self.client.post(self._add_url(), {'intake_id': self.single.id})
+
+    # --- add ---
+
+    def test_add_single_creates_one_empty_row_per_day(self):
+        response = self._add_single()
+
+        self.assertRedirects(response, self._detail_url())
+        rows = self._rows(self.single.name)
+        self.assertEqual(rows.count(), self.DAYS)
+        self.assertEqual(sorted(rows.values_list('menu_day', flat=True)), list(range(self.DAYS)))
+        for row in rows:
+            self.assertIsNone(row.dish_id)
+            self.assertEqual(row.quantity, 0)
+            self.assertEqual(row.kcal, Decimal('0'))
+            self.assertFalse(row.is_free_meal)
+            self.assertEqual(row.intake_id, self.single.id)
+
+    def test_add_shows_message_and_sin_asignar_and_removes_from_available(self):
+        self.client.force_login(self.nutri)
+        before_response = self.client.get(self._detail_url())
+        before = before_response.context['available_intakes']
+        self.assertIn(self.single.id, [i['id'] for i in before])
+        self.assertNotContains(before_response, 'Sin asignar')
+
+        response = self.client.post(self._add_url(), {'intake_id': self.single.id}, follow=True)
+
+        self.assertContains(response, 'Ingesta añadida al menú.')
+        self.assertContains(response, 'Sin asignar')
+        self.assertContains(response, self.single.name)
+        after = response.context['available_intakes']
+        self.assertNotIn(self.single.id, [i['id'] for i in after])
+        self.assertEqual(len(after), len(before) - 1)
+        for entry in after:
+            self.assertEqual(set(entry), {'id', 'label'})
+
+    def test_edit_menu_intake_can_assign_dish_to_empty_cell(self):
+        self._add_single()
+        row = self._rows(self.single.name).get(menu_day=1)
+
+        response = self.client.post(
+            reverse('edit_menu_intake', args=[self.client_obj.id, self.menu.id, row.id]),
+            data=json.dumps({'dish_id': self.dish_main.id, 'quantity': 100}),
+            content_type='application/json',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        row.refresh_from_db()
+        self.assertEqual(row.dish_id, self.dish_main.id)
+        self.assertEqual(row.quantity, 100)
+        self.assertAlmostEqual(float(row.kcal), 200.0, delta=1)
+        # las otras celdas de la fila siguen vacias
+        self.assertEqual(self._rows(self.single.name).filter(dish__isnull=True).count(), self.DAYS - 1)
+
+    def test_add_duplicate_is_rejected_without_creating_rows(self):
+        self._add_single()
+        response = self.client.post(self._add_url(), {'intake_id': self.single.id}, follow=True)
+
+        self.assertContains(response, 'Esa ingesta ya está en el menú.')
+        self.assertEqual(self._rows(self.single.name).count(), self.DAYS)
+
+    def test_add_intake_already_in_menu_via_generated_main_is_rejected(self):
+        self.client.force_login(self.nutri)
+        before = MenuIntake.objects.filter(menu=self.menu).count()
+        response = self.client.post(self._add_url(), {'intake_id': self.comida['main'].id}, follow=True)
+
+        self.assertContains(response, 'Esa ingesta ya está en el menú.')
+        self.assertEqual(MenuIntake.objects.filter(menu=self.menu).count(), before)
+
+    def test_add_inactive_intake_is_rejected(self):
+        self.single.status = False
+        self.single.save(update_fields=['status'])
+        self.client.force_login(self.nutri)
+        response = self.client.post(self._add_url(), {'intake_id': self.single.id}, follow=True)
+
+        self.assertContains(response, 'Selecciona una ingesta válida.')
+        self.assertFalse(MenuIntake.objects.filter(menu=self.menu, intake=self.single).exists())
+
+    def test_add_invalid_or_missing_intake_id_is_rejected(self):
+        self.client.force_login(self.nutri)
+        before = MenuIntake.objects.filter(menu=self.menu).count()
+        for data in ({}, {'intake_id': 'abc'}, {'intake_id': 999999}):
+            response = self.client.post(self._add_url(), data, follow=True)
+            self.assertContains(response, 'Selecciona una ingesta válida.')
+        self.assertEqual(MenuIntake.objects.filter(menu=self.menu).count(), before)
+
+    def test_add_starter_without_main_in_menu_is_rejected(self):
+        starter = self.cena.get('starter')
+        if starter is None:
+            self.skipTest('No hay Intake de entrante para la cena')
+        self.client.force_login(self.nutri)
+        before = MenuIntake.objects.filter(menu=self.menu).count()
+        response = self.client.post(self._add_url(), {'intake_id': starter.id}, follow=True)
+
+        self.assertContains(response, 'Añade antes la ingesta')
+        self.assertEqual(MenuIntake.objects.filter(menu=self.menu).count(), before)
+
+    def test_add_main_of_group_then_starter_creates_group_slot(self):
+        starter = self.cena.get('starter')
+        if starter is None:
+            self.skipTest('No hay Intake de entrante para la cena')
+        self.client.force_login(self.nutri)
+        self.client.post(self._add_url(), {'intake_id': self.cena['main'].id})
+        self.client.post(self._add_url(), {'intake_id': starter.id})
+
+        slot = next(s for s in self._config()['meal_slots'] if s['key'] == 'group-cena')
+        self.assertEqual(slot['kind'], 'group')
+        self.assertEqual(slot['intakes']['main'], self.cena['main'].id)
+        self.assertEqual(slot['intakes']['starter'], starter.id)
+        self.assertTrue(slot['include_starter'])
+        self.assertFalse(slot['include_dessert'])
+        self.assertEqual(MenuIntake.objects.filter(menu=self.menu, intake=starter).count(), self.DAYS)
+
+    def test_add_get_not_allowed(self):
+        self.client.force_login(self.nutri)
+        self.assertEqual(self.client.get(self._add_url()).status_code, 405)
+
+    def test_add_other_nutri_gets_404_and_nothing_changes(self):
+        before = MenuIntake.objects.filter(menu=self.menu).count()
+        self.client.force_login(make_nutri('otro_addrm@example.com'))
+        response = self.client.post(self._add_url(), {'intake_id': self.single.id})
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(MenuIntake.objects.filter(menu=self.menu).count(), before)
+
+    def test_add_requires_login(self):
+        response = self.client.post(self._add_url(), {'intake_id': self.single.id})
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(MenuIntake.objects.filter(menu=self.menu, intake=self.single).exists())
+
+    def test_add_updates_generation_config_with_single_slot(self):
+        self._add_single()
+
+        slot = next(s for s in self._config()['meal_slots'] if s['key'] == f'single-{self.single.id}')
+        self.assertEqual(slot['kind'], 'single')
+        self.assertEqual(slot['intakes'], {'single': self.single.id})
+        self.assertIn('group-comida', self._slot_keys())
+
+    def test_add_without_generation_config_leaves_it_empty(self):
+        Menu.objects.filter(id=self.menu.id).update(generation_config=None)
+        self._add_single()
+
+        self.assertEqual(self._rows(self.single.name).count(), self.DAYS)
+        self.assertFalse(self._config())
+
+    def test_regenerate_after_add_includes_new_slot(self):
+        self._add_single()
+        response = self.client.post(reverse('regenerate_menu', args=[self.client_obj.id, self.menu.id]))
+
+        new_menu = Menu.objects.get(client=self.client_obj)
+        self.assertRedirects(response, reverse('diet_detail', args=[self.client_obj.id, new_menu.id]))
+        rows = MenuIntake.objects.filter(menu=new_menu, intake_alias=self.single.name)
+        self.assertEqual(rows.count(), self.DAYS)
+        self.assertFalse(rows.filter(dish__isnull=True).exists())
+
+    # --- remove ---
+
+    def test_remove_deletes_rows_across_all_days(self):
+        self._add_single()
+        response = self.client.post(self._remove_url(), {'intake_alias': self.single.name}, follow=True)
+
+        self.assertContains(response, 'Ingesta eliminada del menú.')
+        self.assertEqual(self._rows(self.single.name).count(), 0)
+        self.assertEqual(self._rows(self.main_alias).count(), self.DAYS)
+        self.assertIn(self.single.id, [i['id'] for i in response.context['available_intakes']])
+
+    def test_remove_updates_generation_config_for_single(self):
+        self._add_single()
+        self.client.post(self._remove_url(), {'intake_alias': self.single.name})
+
+        self.assertNotIn(f'single-{self.single.id}', self._slot_keys())
+        self.assertIn('group-comida', self._slot_keys())
+
+    def test_regenerate_after_remove_excludes_slot(self):
+        self._add_single()
+        self.client.post(self._remove_url(), {'intake_alias': self.single.name})
+        self.client.post(reverse('regenerate_menu', args=[self.client_obj.id, self.menu.id]))
+
+        new_menu = Menu.objects.get(client=self.client_obj)
+        self.assertFalse(MenuIntake.objects.filter(menu=new_menu, intake_alias=self.single.name).exists())
+        self.assertEqual(
+            MenuIntake.objects.filter(menu=new_menu, intake_alias=self.main_alias).count(), self.DAYS,
+        )
+
+    def test_remove_last_alias_is_refused(self):
+        self.client.force_login(self.nutri)
+        response = self.client.post(self._remove_url(), {'intake_alias': self.main_alias}, follow=True)
+
+        self.assertContains(response, 'No se puede eliminar la última ingesta del menú.')
+        self.assertEqual(self._rows(self.main_alias).count(), self.DAYS)
+        self.assertIn('group-comida', self._slot_keys())
+
+    def test_remove_unknown_alias_is_refused(self):
+        self._add_single()
+        before = MenuIntake.objects.filter(menu=self.menu).count()
+        for alias in ('', 'No existe'):
+            response = self.client.post(self._remove_url(), {'intake_alias': alias}, follow=True)
+            self.assertContains(response, 'La ingesta indicada no existe en el menú.')
+        self.assertEqual(MenuIntake.objects.filter(menu=self.menu).count(), before)
+
+    def test_remove_group_main_refused_while_starter_or_dessert_remain(self):
+        starter = self.comida.get('starter')
+        if starter is None:
+            self.skipTest('No hay Intake de entrante para la comida')
+        self.client.force_login(self.nutri)
+        self.client.post(self._add_url(), {'intake_id': starter.id})
+        self.assertEqual(self._rows('Entrante - Comida').count(), self.DAYS)
+        # otra fila ajena al grupo, para que no salte el rechazo de "ultima"
+        self.client.post(self._add_url(), {'intake_id': self.single.id})
+
+        response = self.client.post(self._remove_url(), {'intake_alias': self.main_alias}, follow=True)
+
+        self.assertContains(response, 'Elimina antes el resto de ingestas de esa comida')
+        self.assertEqual(self._rows(self.main_alias).count(), self.DAYS)
+        self.assertIn('group-comida', self._slot_keys())
+
+    def test_remove_starter_flips_include_flag_then_main_removes_group_slot(self):
+        starter = self.comida.get('starter')
+        if starter is None:
+            self.skipTest('No hay Intake de entrante para la comida')
+        self.client.force_login(self.nutri)
+        self.client.post(self._add_url(), {'intake_id': starter.id})
+        self.client.post(self._add_url(), {'intake_id': self.single.id})
+        slot = next(s for s in self._config()['meal_slots'] if s['key'] == 'group-comida')
+        self.assertTrue(slot['include_starter'])
+
+        self.client.post(self._remove_url(), {'intake_alias': 'Entrante - Comida'})
+        slot = next(s for s in self._config()['meal_slots'] if s['key'] == 'group-comida')
+        self.assertFalse(slot['include_starter'])
+        self.assertEqual(self._rows('Entrante - Comida').count(), 0)
+
+        self.client.post(self._remove_url(), {'intake_alias': self.main_alias})
+        self.assertNotIn('group-comida', self._slot_keys())
+        self.assertEqual(self._rows(self.main_alias).count(), 0)
+
+    def test_remove_get_not_allowed(self):
+        self.client.force_login(self.nutri)
+        self.assertEqual(self.client.get(self._remove_url()).status_code, 405)
+
+    def test_remove_other_nutri_gets_404_and_nothing_changes(self):
+        self._add_single()
+        before = MenuIntake.objects.filter(menu=self.menu).count()
+        config_before = self._config()
+        self.client.force_login(make_nutri('otro_addrm2@example.com'))
+        response = self.client.post(self._remove_url(), {'intake_alias': self.single.name})
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(MenuIntake.objects.filter(menu=self.menu).count(), before)
+        self.assertEqual(self._config(), config_before)
+
+    # --- PDF ---
+
+    def test_pdf_download_renders_with_empty_cell(self):
+        self._add_single()
+        response = self.client.get(reverse('download_menu_pdf', args=[self.client_obj.id, self.menu.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.content.startswith(b'%PDF'))
+
+    def test_pdf_template_shows_sin_asignar_for_empty_cell(self):
+        from django.template.loader import render_to_string
+        from Menus.views import _build_diet_weeks
+
+        self._add_single()
+        self.menu.refresh_from_db()
+        html = render_to_string('pdf/diet.html', {
+            'client': self.client_obj, 'menu': self.menu, 'weeks': _build_diet_weeks(self.menu),
+        })
+        self.assertIn('Sin asignar', html)
+
+
+class SharedDessertMenuIntakeTests(TestCase):
+    """Postre sembrado (course_role='dessert', meal_group='') compartido entre
+    Comida y Cena: ofertas por grupo, token '<id>:<grupo>' y config."""
+
+    DAYS = 2
+
+    def setUp(self):
+        self.nutri = make_nutri('nutri_postre@example.com')
+        self.client_obj = make_client(self.nutri)
+        product = make_product('Pollo', kcal=200, prot=30, fat=5, carb=0)
+        fruit = make_product('Manzana', kcal=50, prot=0, fat=0, carb=12)
+        make_dish('Pollo asado', Dish.DishType.MAIN, product)
+        make_dish('Manzana', Dish.DishType.DESSERT, fruit, quantity=100)
+
+        _, groups = get_meal_structure()
+        self.comida = groups['comida']
+        self.cena = groups['cena']
+        self.dessert = self.comida['dessert']
+        self.assertIsNotNone(self.dessert)
+        self.assertEqual(self.dessert.meal_group, '')
+
+        slot = MealSlotConfig(
+            key='group-comida', label='Comida', kind='group', intakes=self.comida,
+            include_starter=False, include_dessert=False,
+        )
+        config = DietConfig(
+            days=self.DAYS, start_date=date(2026, 9, 1), meal_slots=[slot],
+            target=NutritionTarget(kcal=800, prot_g=60, fat_g=25, carb_g=80),
+        )
+        days = generate_diet(self.client_obj, self.nutri, config)
+        self.menu = persist_generated_diet(self.nutri, self.client_obj, config, days)
+        self.client.force_login(self.nutri)
+
+    def _add(self, token):
+        return self.client.post(
+            reverse('add_menu_intake', args=[self.client_obj.id, self.menu.id]),
+            {'intake_id': token}, follow=True,
+        )
+
+    def _remove(self, alias):
+        return self.client.post(
+            reverse('remove_menu_intake', args=[self.client_obj.id, self.menu.id]),
+            {'intake_alias': alias}, follow=True,
+        )
+
+    def _available(self):
+        response = self.client.get(reverse('diet_detail', args=[self.client_obj.id, self.menu.id]))
+        return {i['id']: i['label'] for i in response.context['available_intakes']}
+
+    def _slot(self, key):
+        self.menu.refresh_from_db()
+        return next((s for s in self.menu.generation_config['meal_slots'] if s['key'] == key), None)
+
+    def _rows(self, alias, menu=None):
+        return MenuIntake.objects.filter(menu=menu or self.menu, intake_alias=alias)
+
+    def test_dessert_offered_only_for_groups_whose_main_is_present(self):
+        available = self._available()
+        self.assertEqual(available.get(f'{self.dessert.id}:comida'), 'Postre - Comida')
+        self.assertNotIn(f'{self.dessert.id}:cena', available)
+        # no se ofrece como entero suelto (ambiguo)
+        self.assertNotIn(self.dessert.id, available)
+        # el principal de la cena sigue siendo un entero
+        self.assertEqual(available.get(self.cena['main'].id), 'Plato principal - Cena')
+
+        self._add(self.cena['main'].id)
+        available = self._available()
+        self.assertEqual(available.get(f'{self.dessert.id}:cena'), 'Postre - Cena')
+        self.assertEqual(available.get(f'{self.dessert.id}:comida'), 'Postre - Comida')
+
+    def test_starter_of_group_without_main_is_not_offered(self):
+        starter = self.cena.get('starter')
+        if starter is None:
+            self.skipTest('No hay Intake de entrante para la cena')
+        ids = list(self._available())
+        self.assertNotIn(starter.id, ids)
+        self.assertNotIn(str(starter.id), ids)
+
+    def test_plain_integer_for_shared_dessert_is_rejected_as_ambiguous(self):
+        before = MenuIntake.objects.filter(menu=self.menu).count()
+        response = self._add(self.dessert.id)
+
+        self.assertContains(response, 'Selecciona una ingesta válida.')
+        self.assertEqual(MenuIntake.objects.filter(menu=self.menu).count(), before)
+
+    def test_unknown_group_token_is_rejected(self):
+        before = MenuIntake.objects.filter(menu=self.menu).count()
+        for token in (f'{self.dessert.id}:merienda', f'{self.dessert.id}:', '999999:comida'):
+            response = self._add(token)
+            self.assertContains(response, 'Selecciona una ingesta válida.')
+        self.assertEqual(MenuIntake.objects.filter(menu=self.menu).count(), before)
+
+    def test_dessert_token_for_group_without_main_is_rejected(self):
+        before = MenuIntake.objects.filter(menu=self.menu).count()
+        response = self._add(f'{self.dessert.id}:cena')
+
+        self.assertContains(response, 'Añade antes la ingesta')
+        self.assertEqual(MenuIntake.objects.filter(menu=self.menu).count(), before)
+
+    def test_add_postre_comida_when_postre_cena_exists(self):
+        self._add(self.cena['main'].id)
+        self._add(f'{self.dessert.id}:cena')
+        self.assertEqual(self._rows('Postre - Cena').count(), self.DAYS)
+        self.assertNotIn(f'{self.dessert.id}:cena', self._available())
+
+        response = self._add(f'{self.dessert.id}:comida')
+
+        self.assertContains(response, 'Ingesta añadida al menú.')
+        rows = self._rows('Postre - Comida')
+        self.assertEqual(rows.count(), self.DAYS)
+        for row in rows:
+            self.assertIsNone(row.dish_id)
+            self.assertEqual(row.intake_id, self.dessert.id)
+        self.assertEqual(self._rows('Postre - Cena').count(), self.DAYS)
+        slot = self._slot('group-comida')
+        self.assertTrue(slot['include_dessert'])
+        self.assertEqual(slot['intakes']['dessert'], self.dessert.id)
+        self.assertTrue(self._slot('group-cena')['include_dessert'])
+
+    def test_add_same_postre_alias_twice_is_rejected(self):
+        self._add(f'{self.dessert.id}:comida')
+        response = self._add(f'{self.dessert.id}:comida')
+
+        self.assertContains(response, 'Esa ingesta ya está en el menú.')
+        self.assertEqual(self._rows('Postre - Comida').count(), self.DAYS)
+
+    def test_remove_postre_comida_updates_config_and_leaves_cena(self):
+        self._add(self.cena['main'].id)
+        self._add(f'{self.dessert.id}:cena')
+        self._add(f'{self.dessert.id}:comida')
+
+        response = self._remove('Postre - Comida')
+
+        self.assertContains(response, 'Ingesta eliminada del menú.')
+        self.assertEqual(self._rows('Postre - Comida').count(), 0)
+        self.assertEqual(self._rows('Postre - Cena').count(), self.DAYS)
+        self.assertFalse(self._slot('group-comida')['include_dessert'])
+        self.assertTrue(self._slot('group-cena')['include_dessert'])
+        self.assertEqual(
+            self._available().get(f'{self.dessert.id}:comida'), 'Postre - Comida',
+        )
+
+    def test_regenerate_after_removing_postre_comida_does_not_recreate_it(self):
+        self._add(self.cena['main'].id)
+        self._add(f'{self.dessert.id}:cena')
+        self._add(f'{self.dessert.id}:comida')
+        self._remove('Postre - Comida')
+
+        self.client.post(reverse('regenerate_menu', args=[self.client_obj.id, self.menu.id]))
+
+        new_menu = Menu.objects.get(client=self.client_obj)
+        self.assertFalse(self._rows('Postre - Comida', new_menu).exists())
+        cena_rows = self._rows('Postre - Cena', new_menu)
+        self.assertEqual(cena_rows.count(), self.DAYS)
+        self.assertFalse(cena_rows.filter(dish__isnull=True).exists())
+        self.assertEqual(self._rows('Plato principal - Comida', new_menu).count(), self.DAYS)
+
+    def test_regenerate_after_adding_postre_comida_creates_it(self):
+        self._add(f'{self.dessert.id}:comida')
+        self.client.post(reverse('regenerate_menu', args=[self.client_obj.id, self.menu.id]))
+
+        new_menu = Menu.objects.get(client=self.client_obj)
+        rows = self._rows('Postre - Comida', new_menu)
+        self.assertEqual(rows.count(), self.DAYS)
+        self.assertFalse(rows.filter(dish__isnull=True).exists())

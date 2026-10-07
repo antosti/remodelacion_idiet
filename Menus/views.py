@@ -460,7 +460,223 @@ def diet_detail(request, client_id, menu_id):
     return render(request, 'admin/diet_detail.html', {
         'client': client, 'menu': menu, 'weeks': weeks,
         'can_regenerate': bool(weeks),
+        'available_intakes': _available_intakes_for_menu(menu),
     })
+
+
+def _group_alias(role, group):
+    return f'{ROLE_LABELS[role]} - {group.capitalize()}'
+
+
+def _known_meal_groups():
+    return sorted(set(
+        Intake.objects.filter(status=True).exclude(meal_group='').values_list('meal_group', flat=True)
+    ))
+
+
+def _intake_candidates(intake, known_groups):
+    """Pares (token, alias, group) con los que se puede anadir esta Intake.
+    Token opaco: '<id>' (toma suelta o Intake con meal_group propio) o
+    '<id>:<meal_group>' para Intake compartidas sin meal_group (ej. el postre
+    sembrado, que el generador usa en Comida y en Cena)."""
+    if intake.course_role == Intake.CourseRole.SINGLE:
+        return [(str(intake.id), intake.name, None)]
+    if intake.course_role not in ROLE_LABELS:
+        return []
+    if intake.meal_group:
+        return [(str(intake.id), _group_alias(intake.course_role, intake.meal_group), intake.meal_group)]
+    return [
+        (f'{intake.id}:{group}', _group_alias(intake.course_role, group), group)
+        for group in known_groups
+    ]
+
+
+def _resolve_intake_token(token):
+    """token -> (intake, alias, group) o None si es invalido."""
+    token = str(token or '').strip()
+    intake_part = token.partition(':')[0]
+    intake_id = _parse_int(intake_part)
+    intake = Intake.objects.filter(id=intake_id, status=True).first() if intake_id else None
+    if intake is None:
+        return None
+    for candidate_token, alias, group in _intake_candidates(intake, _known_meal_groups()):
+        if candidate_token == token:
+            return intake, alias, group
+    return None
+
+
+def _available_intakes_for_menu(menu):
+    """Ingestas activas que aun no estan en la dieta, en orden de calendario.
+    'id' es el token opaco que acepta add_menu_intake."""
+    rows = MenuIntake.objects.filter(menu=menu)
+    used_aliases = set(rows.values_list('intake_alias', flat=True))
+    used_intake_ids = set(rows.values_list('intake_id', flat=True))
+    known_groups = _known_meal_groups()
+
+    candidates = []
+    for intake in Intake.objects.filter(status=True).order_by('order', 'id'):
+        for token, alias, group in _intake_candidates(intake, known_groups):
+            if alias in used_aliases:
+                continue
+            if group is None and intake.id in used_intake_ids:
+                continue
+            if (group is not None and intake.course_role != Intake.CourseRole.MAIN
+                    and _group_alias(Intake.CourseRole.MAIN, group) not in used_aliases):
+                continue
+            candidates.append((intake, token, alias))
+
+    def sort_key(entry):
+        alias = entry[2]
+        position = CANONICAL_ALIAS_ORDER.index(alias) if alias in CANONICAL_ALIAS_ORDER else len(CANONICAL_ALIAS_ORDER)
+        return position, entry[0].order, entry[0].id
+
+    candidates.sort(key=sort_key)
+    return [
+        {'id': int(token) if token.isdigit() else token, 'label': alias}
+        for _, token, alias in candidates
+    ]
+
+
+def _add_intake_to_config(config, intake, group):
+    """Anade la ingesta a una Menu.generation_config (dict serializado) para
+    que regenerar la rellene. Formato: ver Menus.generator.domain.serialize_config."""
+    slots = config['meal_slots']
+    if group is None:
+        key = f'single-{intake.id}'
+        if not any(slot['key'] == key for slot in slots):
+            slots.append({
+                'key': key, 'label': intake.name, 'kind': 'single',
+                'intakes': {'single': intake.id},
+                'include_starter': False, 'include_dessert': False,
+            })
+        return
+
+    key = f'group-{group}'
+    slot = next((s for s in slots if s['key'] == key), None)
+    if slot is None:
+        slot = {
+            'key': key, 'label': group.capitalize(), 'kind': 'group',
+            'intakes': {}, 'include_starter': False, 'include_dessert': False,
+        }
+        slots.append(slot)
+    slot['intakes'][intake.course_role] = intake.id
+    if intake.course_role == Intake.CourseRole.STARTER:
+        slot['include_starter'] = True
+    elif intake.course_role == Intake.CourseRole.DESSERT:
+        slot['include_dessert'] = True
+
+
+def _remove_intake_from_config(config, intake, alias):
+    """Inverso de _add_intake_to_config. El grupo se deduce del alias (no de
+    intake.meal_group, que esta vacio en Intake compartidas como el postre).
+    Si se quita el principal se elimina el grupo entero."""
+    slots = config['meal_slots']
+    if intake.course_role == Intake.CourseRole.SINGLE:
+        config['meal_slots'] = [
+            slot for slot in slots
+            if not (slot['kind'] == 'single' and slot['intakes'].get('single') == intake.id)
+        ]
+        return
+
+    for slot in slots:
+        if slot['kind'] != 'group' or f"{ROLE_LABELS[intake.course_role]} - {slot['label']}" != alias:
+            continue
+        if intake.course_role == Intake.CourseRole.MAIN:
+            config['meal_slots'] = [s for s in slots if s is not slot]
+        elif intake.course_role == Intake.CourseRole.STARTER:
+            slot['include_starter'] = False
+        elif intake.course_role == Intake.CourseRole.DESSERT:
+            slot['include_dessert'] = False
+        break
+
+
+@login_required
+@require_http_methods(['POST'])
+def add_menu_intake(request, client_id, menu_id):
+    """Anade una fila de ingesta vacia (sin plato) a todos los dias de la
+    dieta; se rellena despues con edit_menu_intake o al rehacer la dieta.
+    `intake_id` es el token opaco de available_intakes ('<id>' o '<id>:<grupo>')."""
+    client = get_visible_client_or_404(request.user, id=client_id)
+    menu = get_object_or_404(Menu, id=menu_id, client=client)
+    back = redirect('diet_detail', client_id=client.id, menu_id=menu.id)
+
+    resolved = _resolve_intake_token(request.POST.get('intake_id'))
+    if resolved is None:
+        messages.error(request, 'Selecciona una ingesta válida.')
+        return back
+    intake, alias, group = resolved
+
+    existing = MenuIntake.objects.filter(menu=menu)
+    duplicate = Q(intake_alias=alias)
+    if group is None:
+        duplicate |= Q(intake=intake)
+    if existing.filter(duplicate).exists():
+        messages.error(request, 'Esa ingesta ya está en el menú.')
+        return back
+
+    # Un grupo (comida/cena) necesita su plato principal para poder generarse.
+    if group is not None and intake.course_role != Intake.CourseRole.MAIN:
+        main_alias = _group_alias(Intake.CourseRole.MAIN, group)
+        if not existing.filter(intake_alias=main_alias).exists():
+            messages.error(request, f'Añade antes la ingesta "{main_alias}".')
+            return back
+
+    days = (menu.date_fin - menu.date_ini).days + 1
+    with transaction.atomic():
+        MenuIntake.objects.bulk_create([
+            MenuIntake(
+                menu=menu, dish=None, intake=intake, quantity=0, kcal=Decimal('0'),
+                menu_day=day, intake_alias=alias, is_free_meal=False,
+            )
+            for day in range(days)
+        ])
+        if menu.generation_config:
+            _add_intake_to_config(menu.generation_config, intake, group)
+            menu.save(update_fields=['generation_config'])
+
+    messages.success(request, 'Ingesta añadida al menú.')
+    return back
+
+
+@login_required
+@require_http_methods(['POST'])
+def remove_menu_intake(request, client_id, menu_id):
+    """Elimina una fila de ingesta (intake_alias) de todos los dias de la dieta."""
+    client = get_visible_client_or_404(request.user, id=client_id)
+    menu = get_object_or_404(Menu, id=menu_id, client=client)
+    back = redirect('diet_detail', client_id=client.id, menu_id=menu.id)
+
+    alias = request.POST.get('intake_alias', '')
+    rows = MenuIntake.objects.filter(menu=menu)
+    target_rows = rows.filter(intake_alias=alias)
+    sample = target_rows.select_related('intake').first()
+    if sample is None:
+        messages.error(request, 'La ingesta indicada no existe en el menú.')
+        return back
+
+    if not rows.exclude(intake_alias=alias).exists():
+        messages.error(request, 'No se puede eliminar la última ingesta del menú.')
+        return back
+
+    intake = sample.intake
+    if intake.course_role == Intake.CourseRole.MAIN and ' - ' in alias:
+        group_label = alias.split(' - ', 1)[1]
+        dependent_aliases = [
+            f'{ROLE_LABELS[Intake.CourseRole.STARTER]} - {group_label}',
+            f'{ROLE_LABELS[Intake.CourseRole.DESSERT]} - {group_label}',
+        ]
+        if rows.filter(intake_alias__in=dependent_aliases).exists():
+            messages.error(request, 'Elimina antes el resto de ingestas de esa comida (entrante/postre).')
+            return back
+
+    with transaction.atomic():
+        target_rows.delete()
+        if menu.generation_config:
+            _remove_intake_from_config(menu.generation_config, intake, alias)
+            menu.save(update_fields=['generation_config'])
+
+    messages.success(request, 'Ingesta eliminada del menú.')
+    return back
 
 
 @login_required
@@ -626,13 +842,23 @@ def copy_menu_intake(request, client_id, menu_id, item_id):
 
     other_items = list(MenuIntake.objects.filter(menu=menu).exclude(id=item.id).select_related('intake'))
 
-    if item.is_free_meal or item.dish_id is None:
+    if item.is_free_meal:
         return JsonResponse({
             'dish_id': None,
             'dish_name': 'Comida libre',
             'quantity': 0,
             'is_free_meal': True,
             'target_ids': [other.id for other in other_items],
+        })
+
+    if item.dish_id is None:
+        # Fila sin asignar (ej. ingesta recien anadida): no hay nada que copiar.
+        return JsonResponse({
+            'dish_id': None,
+            'dish_name': 'Sin asignar',
+            'quantity': 0,
+            'is_free_meal': False,
+            'target_ids': [],
         })
 
     distinct_intakes = {}

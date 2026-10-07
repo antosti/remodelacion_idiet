@@ -1,0 +1,65 @@
+{% extends 'admin/layout.html' %}
+{% block title %} Borrar datos de usuario {% endblock %}
+{% load static %}
+
+{% block extra_js %}
+<script src="{% static 'js/purge_user_data.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="w-full p-4 sm:p-6 bg-gray-50 rounded-2xl">
+    <div class="px-2 mb-6">
+        <h1 class="text-2xl font-bold text-gray-700">Borrar datos de {{ target.first_name }} {{ target.last_name }}</h1>
+        <p class="mt-1 text-sm font-semibold text-gray-500">{{ target.email }} · Entorno: {{ environment }}</p>
+    </div>
+
+    <div class="bg-white border border-red-200 rounded-2xl p-5 shadow-sm space-y-5 max-w-2xl">
+        <div class="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            Esta acción es <strong>irreversible</strong>. Se borrarán todos los datos de este nutricionista en el
+            entorno de <strong>{{ environment }}</strong>. La cuenta del usuario se conserva.
+        </div>
+
+        <div>
+            <h2 class="text-sm font-semibold text-gray-700 mb-2">Se borrará:</h2>
+            <ul class="divide-y divide-gray-100 rounded-lg border border-gray-200 text-sm">
+                {% for item in summary %}
+                <li class="flex justify-between px-4 py-2">
+                    <span class="text-gray-700">{{ item.label }}</span>
+                    <span class="font-semibold text-gray-700" data-summary-key="{{ item.key }}">{{ item.count }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            <p class="mt-2 text-xs text-gray-500">
+                Al borrar los clientes se borran también sus citas, medidas, exclusiones y dietas.
+            </p>
+        </div>
+
+        {% if foreign_rows %}
+        <div class="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
+            Atención: {{ foreign_rows }} fila(s) de <strong>otros usuarios</strong> (tomas de dietas o plantillas,
+            ingredientes de platos) usan platos o alimentos de este nutricionista y también se borrarán.
+        </div>
+        {% endif %}
+
+        <form method="post" class="space-y-3">
+            {% csrf_token %}
+            <label for="confirm-email" class="block text-sm font-medium text-gray-700">
+                Para confirmar, escribe el email del usuario: <strong>{{ target.email }}</strong>
+            </label>
+            <input type="text" name="confirm_email" id="confirm-email" autocomplete="off"
+                data-expected="{{ target.email|lower }}"
+                class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+            <div class="flex justify-between gap-3 pt-2">
+                <a href="{% url 'list_users' %}"
+                    class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50">
+                    Cancelar
+                </a>
+                <button type="submit" id="purge-confirm-btn" disabled
+                    class="px-4 py-2 rounded-lg bg-red-500 text-white font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Borrar todos los datos ({{ total }})
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

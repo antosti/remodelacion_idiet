@@ -1,12 +1,13 @@
 import logging
 from django.shortcuts import render
 from django.contrib.auth import authenticate, login, logout
-from django.shortcuts import render, redirect
+from django.shortcuts import get_object_or_404, render, redirect
+from django.views.decorators.http import require_http_methods
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.password_validation import validate_password
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.urls import reverse
@@ -14,6 +15,9 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from idiet.db_context import ALLOWED_DATABASE_ALIASES, use_database
 from Users.models import User
+from Users.data_purge import foreign_rows, purge_user_data, user_data_summary
+from idiet.permissions import is_admin_user
+from idiet.views import paginate_queryset
 
 logger = logging.getLogger('idiet.users')
 
@@ -183,3 +187,56 @@ def password_reset_confirm(request, uidb64, token):
         {"valid_link": True, "uidb64": uidb64, "token": token},
     )
 
+
+
+def _require_admin(user):
+    if not is_admin_user(user):
+        raise PermissionDenied
+
+
+@login_required
+def list_users(request):
+    """Listado de nutricionistas (no admins) del entorno activo, con acceso al
+    borrado en bloque de sus datos. Solo admins."""
+    _require_admin(request.user)
+    users = User.objects.filter(is_staff=False, is_superuser=False).order_by('last_name', 'first_name')
+    context = paginate_queryset(request, users)
+    return render(request, 'admin/list_users.html', context)
+
+
+@login_required
+@require_http_methods(['GET', 'POST'])
+def purge_user_data_view(request, id):
+    """GET: resumen de lo que se borrara. POST: borra todos los datos del
+    nutricionista (la cuenta se conserva) si se confirma escribiendo su email."""
+    _require_admin(request.user)
+    target = get_object_or_404(User, id=id, is_staff=False, is_superuser=False)
+    environment = 'formación' if request.session.get('database_environment') == 'training' else 'clientes'
+
+    if request.method == 'POST':
+        confirm_email = (request.POST.get('confirm_email') or '').strip()
+        if confirm_email.lower() != target.email.lower():
+            messages.error(request, 'El email no coincide; no se ha borrado nada.')
+            return redirect('purge_user_data', id=target.id)
+
+        summary = purge_user_data(target)
+        total = sum(item['count'] for item in summary)
+        logger.warning(
+            'Datos de usuario purgados: admin=%s objetivo=%s entorno=%s resumen=%s',
+            request.user.email, target.email, environment,
+            {item['key']: item['count'] for item in summary},
+        )
+        messages.success(
+            request,
+            f'Se han borrado los datos de {target.email} ({total} registros principales). La cuenta se conserva.',
+        )
+        return redirect('list_users')
+
+    summary = user_data_summary(target)
+    return render(request, 'admin/purge_user_data.html', {
+        'target': target,
+        'summary': summary,
+        'total': sum(item['count'] for item in summary),
+        'foreign_rows': foreign_rows(target),
+        'environment': environment,
+    })

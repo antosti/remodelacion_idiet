@@ -46,6 +46,8 @@
                 <td>
                     {% if cell.item.is_free_meal %}
                     <span class="free">Comida libre</span>
+                    {% elif not cell.item.dish %}
+                    <span class="meta">Sin asignar</span>
                     {% else %}
                     <span class="dish">{{ cell.item.dish.name }}</span><br>
                     <span class="meta">{{ cell.item.quantity }} g · {{ cell.item.kcal|floatformat:0 }} kcal</span>

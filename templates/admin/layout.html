@@ -266,6 +266,10 @@
                                         Desactivadas</a>
                                 </div>
                             </details>
+                            {% if request.user.is_staff or request.user.is_superuser %}
+                            <a href="{% url 'list_users' %}"
+                                class="-mx-3 flex items-center gap-3 rounded-xl px-4 py-2.5 text-base/7 font-semibold text-gray-200 hover:bg-white/10">Usuarios</a>
+                            {% endif %}
                             <details class="group -mx-3 rounded-lg">
                                 <summary
                                     class="flex cursor-pointer items-center gap-3 rounded-xl px-4 py-2.5 text-base/7 font-semibold text-gray-200 hover:bg-white/10">
@@ -694,6 +698,10 @@
                                                         Desactivadas</a>
                                                 </div>
                                             </details>
+                                            {% if request.user.is_staff or request.user.is_superuser %}
+                                            <a href="{% url 'list_users' %}"
+                                                class="-mx-3 flex items-center gap-3 rounded-xl px-4 py-2.5 text-base/7 font-semibold text-gray-200 hover:bg-white/10">Usuarios</a>
+                                            {% endif %}
                                             <details class="group -mx-3 rounded-lg">
                                                 <summary
                                                     class="flex cursor-pointer items-center gap-3 rounded-xl px-4 py-2.5 text-base/7 font-semibold text-gray-200 hover:bg-white/10">

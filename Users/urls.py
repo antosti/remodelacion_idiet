@@ -9,6 +9,8 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('recuperar-contrasena/', views.password_reset_request, name='password_reset_request'),
     path('restablecer-contrasena/<uidb64>/<token>/', views.password_reset_confirm, name='password_reset_confirm'),
+    path('users/', views.list_users, name='list_users'),
+    path('users/<int:id>/purge-data/', views.purge_user_data_view, name='purge_user_data'),
 ]
 
 

@@ -22,6 +22,12 @@
                 Ajustar menú
             </button>
             {% endif %}
+            {% if available_intakes %}
+            <button type="button" id="add-intake-btn"
+                class="h-10 px-3 py-1 border rounded-lg border-idiet text-idiet text-sm font-semibold hover:bg-gray-50">
+                Añadir ingesta
+            </button>
+            {% endif %}
             <button type="button" id="save-template-btn"
                 class="h-10 px-3 py-1 border rounded-lg border-idiet text-idiet text-sm font-semibold hover:bg-gray-50">
                 Guardar como plantilla
@@ -107,6 +113,15 @@
                         <tr class="border-b border-gray-100 last:border-b-0">
                             <th class="row-lock-toggle px-3 py-3 text-left text-xs font-semibold text-gray-600 align-top whitespace-nowrap select-none">
                                 {{ row.alias }}
+                                {% if week.rows|length > 1 %}
+                                <button type="button" data-remove-intake="{{ row.alias }}"
+                                    aria-label="Eliminar ingesta {{ row.alias }}" title="Eliminar ingesta"
+                                    class="ml-1 align-middle text-gray-300 hover:text-red-500 focus:outline-none focus:text-red-500">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                    </svg>
+                                </button>
+                                {% endif %}
                             </th>
                             {% for cell in row.cells %}
                             <td class="lock-cell relative px-3 py-3 border-l border-gray-100 align-top {% if cell.item %}cursor-pointer hover:bg-idiet/5{% else %}bg-gray-50{% endif %}"
@@ -122,6 +137,10 @@
                                 <span class="lock-badge hidden absolute top-1 right-1 text-idiet" title="Se mantendrá al rehacer">🔒</span>
                                 {% if cell.item.is_free_meal %}
                                 <div class="text-gray-500 font-medium italic" data-field="dish-name">Comida libre</div>
+                                <div class="mt-1 text-xs text-gray-400" data-field="quantity-kcal"></div>
+                                <div class="text-xs text-gray-400" data-field="macros"></div>
+                                {% elif not cell.item.dish %}
+                                <div class="text-gray-400 italic" data-field="dish-name">Sin asignar</div>
                                 <div class="mt-1 text-xs text-gray-400" data-field="quantity-kcal"></div>
                                 <div class="text-xs text-gray-400" data-field="macros"></div>
                                 {% else %}
@@ -178,6 +197,56 @@
                 </button>
                 <button type="submit" class="px-4 py-2 rounded-lg bg-idiet text-white font-medium hover:bg-idiet/90">
                     Guardar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    {% if available_intakes %}
+    <div id="add-intake-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <form method="post" action="{% url 'add_menu_intake' client.id menu.id %}"
+            class="bg-white rounded-2xl shadow-lg w-full max-w-md mx-4 p-5 space-y-4">
+            {% csrf_token %}
+            <h3 class="text-lg font-semibold text-gray-700">Añadir ingesta</h3>
+            <p class="text-sm text-gray-500">
+                Se añadirá la ingesta a todos los días del menú, sin plato asignado. Podrás asignar el plato después pulsando en cada celda.
+            </p>
+            <div>
+                <label for="add-intake-select" class="block text-sm font-medium text-gray-700 mb-1">Ingesta</label>
+                <select name="intake_id" id="add-intake-select" required
+                    class="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm">
+                    {% for intake in available_intakes %}
+                    <option value="{{ intake.id }}">{{ intake.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" id="add-intake-cancel" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50">
+                    Cancelar
+                </button>
+                <button type="submit" class="px-4 py-2 rounded-lg bg-idiet text-white font-medium hover:bg-idiet/90">
+                    Añadir
+                </button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+
+    <div id="remove-intake-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <form method="post" action="{% url 'remove_menu_intake' client.id menu.id %}"
+            class="bg-white rounded-2xl shadow-lg w-full max-w-md mx-4 p-5 space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="intake_alias" id="remove-intake-alias-input">
+            <h3 class="text-lg font-semibold text-gray-700">Eliminar ingesta</h3>
+            <p class="text-sm text-gray-500">
+                ¿Eliminar la ingesta <strong id="remove-intake-alias-label"></strong> de todos los días del menú?
+            </p>
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" id="remove-intake-cancel" class="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50">
+                    Cancelar
+                </button>
+                <button type="submit" class="px-4 py-2 rounded-lg bg-red-500 text-white font-medium hover:bg-red-600">
+                    Eliminar
                 </button>
             </div>
         </form>
