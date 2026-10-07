@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import date
 from decimal import Decimal
 from unittest.mock import patch
@@ -395,6 +396,75 @@ class CreateDietViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Menu.objects.filter(client=self.client1).exists())
+
+
+class WizardMacroPercentageTests(TestCase):
+    """El % de macros es solo ayuda de UI: el servidor sigue leyendo kcal y gramos."""
+
+    MACRO_IDS = ('prot', 'fat', 'carb')
+
+    def setUp(self):
+        self.nutri = make_nutri('nutri-macros@example.com')
+        self.client1 = make_client(self.nutri)
+        self.url = reverse('create_diet', args=[self.client1.id])
+
+    def _post_with_mocked_generator(self, extra):
+        data = {
+            'days': '1', 'start_date': '2026-09-01',
+            'include_comida': 'on', 'platos_comida': '1',
+        }
+        data.update(extra)
+        self.client.force_login(self.nutri)
+        with patch('Menus.views.generate_diet', return_value=[]) as gen, \
+                patch('Menus.views.persist_generated_diet') as persist:
+            response = self.client.post(self.url, data)
+        return response, gen, persist
+
+    def test_step_3_renders_percentage_inputs_without_name(self):
+        self.client.force_login(self.nutri)
+        html = self.client.get(self.url).content.decode()
+        step3 = html.index('data-step="3"')
+
+        for macro in self.MACRO_IDS:
+            pct = re.search(r'<input[^>]*id="macro-%s-pct"[^>]*>' % macro, html)
+            self.assertIsNotNone(pct, macro)
+            self.assertNotRegex(pct.group(0), r'\sname=')
+            self.assertGreater(pct.start(), step3)
+
+            grams = re.search(r'<input[^>]*id="macro-%s-g"[^>]*>' % macro, html)
+            self.assertIsNotNone(grams, macro)
+            self.assertIn('name="target_%s_g"' % macro, grams.group(0))
+            self.assertGreater(grams.start(), step3)
+
+        kcal = re.search(r'<input[^>]*id="macro-kcal"[^>]*>', html)
+        self.assertIn('name="target_kcal"', kcal.group(0))
+        self.assertGreater(kcal.start(), step3)
+        for element_id in ('macro-pct-hint', 'macro-kcal-auto-hint', 'macro-pct-total'):
+            self.assertGreater(html.index('id="%s"' % element_id), step3)
+
+    def test_kcal_and_grams_reach_generator_exactly(self):
+        response, gen, persist = self._post_with_mocked_generator({
+            'target_kcal': '2000', 'target_prot_g': '150',
+            'target_fat_g': '66.5', 'target_carb_g': '200',
+        })
+
+        self.assertRedirects(response, reverse('client_detail', args=[self.client1.id]),
+                             fetch_redirect_response=False)
+        gen.assert_called_once()
+        target = gen.call_args.args[2].target
+        self.assertEqual(
+            (target.kcal, target.prot_g, target.fat_g, target.carb_g),
+            (2000, 150, 66.5, 200),
+        )
+
+    def test_grams_without_kcal_are_respected(self):
+        response, gen, persist = self._post_with_mocked_generator({
+            'target_prot_g': '120', 'target_fat_g': '70', 'target_carb_g': '250',
+        })
+
+        gen.assert_called_once()
+        target = gen.call_args.args[2].target
+        self.assertEqual((target.prot_g, target.fat_g, target.carb_g), (120, 70, 250))
 
 
 class EditMenuIntakeViewTests(TestCase):
@@ -1363,3 +1433,32 @@ class DietPdfViewTests(TestCase):
 
         self.assertContains(response, 'href="%s"' % self._download_url())
         self.assertContains(response, 'action="%s"' % self._send_url())
+
+
+class WizardMealOrderTests(TestCase):
+    """Paso 2 de los wizards de dieta y plantilla: tomas en orden cronologico
+    (Intake.order), con comida/cena intercaladas en una sola linea."""
+
+    def setUp(self):
+        self.nutri = make_nutri('order_nutri@example.com')
+        self.client_obj = make_client(self.nutri)
+        self.client.force_login(self.nutri)
+
+    def _assert_chronological(self, html):
+        markers = [
+            '>Desayuno<', '>Media mañana<', 'name="include_comida"',
+            '>Merienda<', 'name="include_cena"', '>Recena<',
+        ]
+        positions = [html.index(marker) for marker in markers]
+        self.assertEqual(positions, sorted(positions))
+        # Opciones de comida en la misma fila, desactivadas hasta marcarla.
+        self.assertIn('data-meal-group-options disabled', html)
+        self.assertNotIn('data-meal-group-options class="hidden', html)
+
+    def test_diet_wizard_lists_meals_chronologically(self):
+        response = self.client.get(reverse('create_diet', args=[self.client_obj.id]))
+        self._assert_chronological(response.content.decode())
+
+    def test_template_wizard_lists_meals_chronologically(self):
+        response = self.client.get(reverse('create_template'))
+        self._assert_chronological(response.content.decode())

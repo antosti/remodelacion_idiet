@@ -1,4 +1,5 @@
 {% extends 'admin/layout.html' %}
+{% load meal_tags %}
 {% block title %} Nueva plantilla {% endblock %}
 {% load static %}
 
@@ -35,52 +36,48 @@
         <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm space-y-5">
             <h2 class="text-lg font-semibold text-gray-700">Tomas del día</h2>
 
-            {% if standalone %}
-            <div>
-                <h3 class="text-sm font-semibold text-gray-600 mb-2">Tomas sencillas</h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-                    {% for intake in standalone %}
-                    <label class="flex items-center gap-3 rounded-lg border border-gray-200 px-3 py-2 hover:bg-gray-50">
-                        <input type="checkbox" name="standalone_intakes" value="{{ intake.id }}"
+            {% meal_options standalone groups as options %}
+            <div class="divide-y divide-gray-100 rounded-lg border border-gray-200">
+                {% for option in options %}
+                {% if option.kind == 'single' %}
+                <div class="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
+                    <label class="flex items-center gap-3 min-w-40">
+                        <input type="checkbox" name="standalone_intakes" value="{{ option.intake.id }}"
                             class="rounded border-gray-300 text-secondary focus:ring-secondary/30">
-                        <span class="text-sm font-medium text-gray-700">{{ intake.name }}</span>
+                        <span class="text-sm font-medium text-gray-700">{{ option.intake.name }}</span>
                     </label>
-                    {% endfor %}
                 </div>
-            </div>
-            {% endif %}
+                {% else %}
+                <div class="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3" data-meal-group="{{ option.key }}">
+                    <label class="flex items-center gap-3 min-w-40">
+                        <input type="checkbox" name="include_{{ option.key }}" data-meal-group-toggle
+                            class="rounded border-gray-300 text-secondary focus:ring-secondary/30">
+                        <span class="text-sm font-medium text-gray-700 capitalize">{{ option.key }}</span>
+                    </label>
 
-            {% for group_key, group in groups.items %}
-            <div class="rounded-lg border border-gray-200 p-4" data-meal-group="{{ group_key }}">
-                <label class="flex items-center gap-3 mb-3">
-                    <input type="checkbox" name="include_{{ group_key }}" data-meal-group-toggle
-                        class="rounded border-gray-300 text-secondary focus:ring-secondary/30">
-                    <span class="text-sm font-semibold text-gray-700 capitalize">Incluir {{ group_key }}</span>
-                </label>
-
-                <div data-meal-group-options class="hidden pl-7 space-y-3">
-                    {% if group.starter %}
-                    <div class="flex items-center gap-4">
+                    <fieldset data-meal-group-options disabled class="flex flex-wrap items-center gap-x-6 gap-y-2 opacity-50">
+                        {% if option.group.starter %}
                         <label class="flex items-center gap-2 text-sm text-gray-700">
-                            <input type="radio" name="platos_{{ group_key }}" value="1" checked>
+                            <input type="radio" name="platos_{{ option.key }}" value="1" checked>
                             1 plato
                         </label>
                         <label class="flex items-center gap-2 text-sm text-gray-700">
-                            <input type="radio" name="platos_{{ group_key }}" value="2">
+                            <input type="radio" name="platos_{{ option.key }}" value="2">
                             2 platos (entrante + principal)
                         </label>
-                    </div>
-                    {% endif %}
+                        {% endif %}
 
-                    {% if group.dessert %}
-                    <label class="flex items-center gap-2 text-sm text-gray-700">
-                        <input type="checkbox" name="postre_{{ group_key }}" class="rounded border-gray-300 text-secondary focus:ring-secondary/30">
-                        Incluir postre
-                    </label>
-                    {% endif %}
+                        {% if option.group.dessert %}
+                        <label class="flex items-center gap-2 text-sm text-gray-700">
+                            <input type="checkbox" name="postre_{{ option.key }}" class="rounded border-gray-300 text-secondary focus:ring-secondary/30">
+                            Postre
+                        </label>
+                        {% endif %}
+                    </fieldset>
                 </div>
+                {% endif %}
+                {% endfor %}
             </div>
-            {% endfor %}
         </div>
 
         <div class="flex justify-end">
